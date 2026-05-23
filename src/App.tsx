@@ -1,51 +1,58 @@
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import { invoke } from "@tauri-apps/api/core";
-import "./App.css";
+import { Group, Panel, Separator } from "react-resizable-panels";
+import { useUIStore } from "@/stores/uiStore";
+import { useAgentEvents } from "@/hooks/useAgentEvents";
+import ChatView from "@/components/ChatView";
+import PromptInput from "@/components/PromptInput";
+import StatusBar from "@/components/StatusBar";
+import CanvasPane from "@/canvas/CanvasPane";
 
-function App() {
-  const [greetMsg, setGreetMsg] = useState("");
-  const [name, setName] = useState("");
+export default function App() {
+  // Wire up Tauri event listeners
+  useAgentEvents();
 
-  async function greet() {
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    setGreetMsg(await invoke("greet", { name }));
-  }
+  const canvasVisible = useUIStore((s) => s.canvasVisible);
 
   return (
-    <main className="container">
-      <h1>Welcome to Tauri + React</h1>
+    <div className="flex h-screen flex-col overflow-hidden bg-[#0d1117] text-[#e6edf3]">
+      {/* Main content area */}
+      <div className="flex flex-1 min-h-0">
+        <Group
+          orientation="horizontal"
+          id="pi-gui-main"
+          style={{ height: "100%", width: "100%" }}
+        >
+          {/* Chat pane */}
+          <Panel
+            id="chat"
+            defaultSize={canvasVisible ? 50 : 100}
+            minSize={25}
+            className="flex flex-col min-w-0"
+          >
+            <ChatView />
+            <PromptInput />
+          </Panel>
 
-      <div className="row">
-        <a href="https://vite.dev" target="_blank">
-          <img src="/vite.svg" className="logo vite" alt="Vite logo" />
-        </a>
-        <a href="https://tauri.app" target="_blank">
-          <img src="/tauri.svg" className="logo tauri" alt="Tauri logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+          {/* Resize handle — only when canvas is visible */}
+          {canvasVisible && (
+            <Separator className="w-px bg-[#21262d] hover:bg-[#58a6ff] active:bg-[#58a6ff] transition-colors" />
+          )}
+
+          {/* Canvas pane */}
+          {canvasVisible && (
+            <Panel
+              id="canvas"
+              defaultSize={50}
+              minSize={20}
+              className="flex flex-col min-w-0"
+            >
+              <CanvasPane />
+            </Panel>
+          )}
+        </Group>
       </div>
-      <p>Click on the Tauri, Vite, and React logos to learn more.</p>
 
-      <form
-        className="row"
-        onSubmit={(e) => {
-          e.preventDefault();
-          greet();
-        }}
-      >
-        <input
-          id="greet-input"
-          onChange={(e) => setName(e.currentTarget.value)}
-          placeholder="Enter a name..."
-        />
-        <button type="submit">Greet</button>
-      </form>
-      <p>{greetMsg}</p>
-    </main>
+      {/* Status bar */}
+      <StatusBar />
+    </div>
   );
 }
-
-export default App;

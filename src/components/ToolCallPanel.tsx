@@ -48,7 +48,7 @@ export default function ToolCallPanel({ toolCall }: Props) {
   const setCanvasVisible = useUIStore((s) => s.setCanvasVisible);
 
   const icon = TOOL_ICONS[toolCall.toolName] ?? "🔧";
-  const statusIcon = STATUS_ICONS[toolCall.toolName === toolCall.toolName ? toolCall.status : toolCall.status];
+  const statusIcon = STATUS_ICONS[toolCall.status];
   const args = toolCall.args as Record<string, unknown> | undefined;
 
   const filePath = extractFilePath(toolCall.toolName, args);
@@ -84,21 +84,21 @@ export default function ToolCallPanel({ toolCall }: Props) {
       {!collapsed && (
         <div className="border-t border-[#21262d] px-3 py-2 text-xs text-[#8b949e] font-mono space-y-2">
           {/* Bash: command */}
-          {toolCall.toolName === "bash" && args?.command && (
+          {toolCall.toolName === "bash" && typeof args?.command === "string" && (
             <div>
               <span className="text-[#484f58]">$</span>{" "}
-              <span className="text-[#e6edf3]">{String(args.command)}</span>
+              <span className="text-[#e6edf3]">{args.command}</span>
             </div>
           )}
 
           {/* Edit: replacements count */}
-          {toolCall.toolName === "edit" && (
+          {toolCall.toolName === "edit" ? (
             <div>
-              {args?.replacements != null && (
-                <span>{String(args.replacements)} replacement(s)</span>
-              )}
+              {typeof args?.replacements === "number" ? (
+                <span>{args.replacements} replacement(s)</span>
+              ) : null}
             </div>
-          )}
+          ) : null}
 
           {/* Write: content length */}
           {toolCall.toolName === "write" && args?.content && (

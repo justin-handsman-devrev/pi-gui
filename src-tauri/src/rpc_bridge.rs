@@ -11,7 +11,7 @@ impl PiBridge {
         app: tauri::AppHandle,
         cwd: &str,
     ) -> Result<Self, String> {
-        let mut child = tokio::process::Command::new("/opt/homebrew/bin/pi")
+        let mut child = tokio::process::Command::new("pi")
             .arg("--rpc")
             .current_dir(cwd)
             .stdin(std::process::Stdio::piped())

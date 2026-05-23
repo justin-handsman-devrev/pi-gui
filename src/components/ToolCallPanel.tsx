@@ -87,23 +87,23 @@ export default function ToolCallPanel({ toolCall }: Props) {
           {toolCall.toolName === "bash" && typeof args?.command === "string" && (
             <div>
               <span className="text-[#484f58]">$</span>{" "}
-              <span className="text-[#e6edf3]">{args.command}</span>
+              <span className="text-[#e6edf3]">{String(args.command)}</span>
             </div>
           )}
 
           {/* Edit: replacements count */}
-          {toolCall.toolName === "edit" ? (
-            <div>
-              {typeof args?.replacements === "number" ? (
-                <span>{args.replacements} replacement(s)</span>
-              ) : null}
-            </div>
-          ) : null}
+          {toolCall.toolName === "edit" && (() => {
+            const edits = args?.edits;
+            if (Array.isArray(edits)) {
+              return <div><span>{edits.length} replacement(s)</span></div>;
+            }
+            return null;
+          })()}
 
           {/* Write: content length */}
-          {toolCall.toolName === "write" && args?.content && (
+          {toolCall.toolName === "write" && typeof args?.content === "string" && (
             <div>
-              {String(args.content).length.toLocaleString()} chars
+              {args.content.length.toLocaleString()} chars
             </div>
           )}
 

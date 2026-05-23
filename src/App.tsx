@@ -1,6 +1,7 @@
 import { Group, Panel, Separator } from "react-resizable-panels";
 import { useUIStore } from "@/stores/uiStore";
 import { useAgentEvents } from "@/hooks/useAgentEvents";
+import { useCanvasSync } from "@/hooks/useCanvasSync";
 import ChatView from "@/components/ChatView";
 import PromptInput from "@/components/PromptInput";
 import StatusBar from "@/components/StatusBar";
@@ -9,6 +10,8 @@ import CanvasPane from "@/canvas/CanvasPane";
 export default function App() {
   // Wire up Tauri event listeners
   useAgentEvents();
+  // Bridge tool events to canvas store
+  useCanvasSync();
 
   const canvasVisible = useUIStore((s) => s.canvasVisible);
 

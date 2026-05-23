@@ -5,20 +5,62 @@ use std::sync::Arc;
 use tauri::Emitter;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 
+/// Resolve the full path to the `pi` binary.
+/// macOS GUI apps don't inherit the shell PATH, so we search common locations.
+fn resolve_pi_path() -> Result<String, String> {
+    // 1. Check PATH-inherited resolution (works in dev mode from terminal)
+    if let Ok(path) = which::which("pi") {
+        return Ok(path.to_string_lossy().into_owned());
+    }
+
+    // 2. Search common macOS locations explicitly
+    let candidates = [
+        "/opt/homebrew/bin/pi",
+        "/usr/local/bin/pi",
+        "/usr/bin/pi",
+        "/opt/local/bin/pi",
+        "/run/current-system/sw/bin/pi", // Nix
+    ];
+    for candidate in &candidates {
+        if std::path::Path::new(candidate).exists() {
+            return Ok(candidate.to_string());
+        }
+    }
+
+    // 3. Try resolving via the user's shell profile
+    if let Ok(output) = std::process::Command::new("/bin/zsh")
+        .args(["-l", "-c", "which pi"])
+        .output()
+    {
+        if output.status.success() {
+            let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
+            if !path.is_empty() && std::path::Path::new(&path).exists() {
+                return Ok(path);
+            }
+        }
+    }
+
+    Err(
+        "Could not find `pi` binary. Make sure @earendil-works/pi-coding-agent is installed globally (npm install -g @earendil-works/pi-coding-agent) and available on PATH.".to_string()
+    )
+}
+
 impl PiBridge {
     /// Spawn the pi agent process and start the stdout reader task.
     pub async fn start(
         app: tauri::AppHandle,
         cwd: &str,
     ) -> Result<Self, String> {
-        let mut child = tokio::process::Command::new("pi")
+        let pi_path = resolve_pi_path()?;
+
+        let mut child = tokio::process::Command::new(&pi_path)
             .arg("--rpc")
             .current_dir(cwd)
             .stdin(std::process::Stdio::piped())
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::piped())
             .spawn()
-            .map_err(|e| format!("Failed to spawn pi --rpc: {e}"))?;
+            .map_err(|e| format!("Failed to spawn pi --rpc at {}: {e}", pi_path))?;
 
         let stdin = child
             .stdin

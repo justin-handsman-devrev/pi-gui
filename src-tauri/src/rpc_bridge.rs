@@ -54,7 +54,8 @@ impl PiBridge {
         let pi_path = resolve_pi_path()?;
 
         let mut child = tokio::process::Command::new(&pi_path)
-            .arg("--rpc")
+            .arg("--mode")
+            .arg("rpc")
             .current_dir(cwd)
             .stdin(std::process::Stdio::piped())
             .stdout(std::process::Stdio::piped())

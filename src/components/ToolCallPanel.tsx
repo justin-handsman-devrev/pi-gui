@@ -25,60 +25,51 @@ import { useCanvasStore } from "@/canvas/canvasStore";
 interface ToolConfig {
   icon: ReactNode;
   label: string;
-  color: string; // tailwind text color
-  bg: string; // tailwind bg color
+  color: string;
 }
 
 const TOOL_CONFIGS: Record<string, ToolConfig> = {
   bash: {
-    icon: <Terminal size={12} />,
+    icon: <Terminal size={14} />,
     label: "Bash",
-    color: "text-amber-400",
-    bg: "bg-amber-500/10",
+    color: "text-[#d4a88c]",
   },
   edit: {
-    icon: <FileEdit size={12} />,
+    icon: <FileEdit size={14} />,
     label: "Edit",
-    color: "text-blue-400",
-    bg: "bg-blue-500/10",
+    color: "text-[#9d8bb8]",
   },
   write: {
-    icon: <FilePenLine size={12} />,
+    icon: <FilePenLine size={14} />,
     label: "Write",
-    color: "text-emerald-400",
-    bg: "bg-emerald-500/10",
+    color: "text-[#5fb8a3]",
   },
   read: {
-    icon: <BookOpen size={12} />,
+    icon: <BookOpen size={14} />,
     label: "Read",
-    color: "text-zinc-400",
-    bg: "bg-zinc-500/10",
+    color: "text-[#a8a29e]",
   },
   grep: {
-    icon: <Search size={12} />,
+    icon: <Search size={14} />,
     label: "Grep",
-    color: "text-violet-400",
-    bg: "bg-violet-500/10",
+    color: "text-[#9d8bb8]",
   },
   find: {
-    icon: <FolderSearch size={12} />,
+    icon: <FolderSearch size={14} />,
     label: "Find",
-    color: "text-violet-400",
-    bg: "bg-violet-500/10",
+    color: "text-[#9d8bb8]",
   },
   ls: {
-    icon: <List size={12} />,
+    icon: <List size={14} />,
     label: "List",
-    color: "text-zinc-400",
-    bg: "bg-zinc-500/10",
+    color: "text-[#a8a29e]",
   },
 };
 
 const DEFAULT_CONFIG: ToolConfig = {
-  icon: <Wrench size={12} />,
+  icon: <Wrench size={14} />,
   label: "Tool",
-  color: "text-zinc-400",
-  bg: "bg-zinc-500/10",
+  color: "text-[#a8a29e]",
 };
 
 // ── Status indicator ─────────────────────────────────────────────────────
@@ -86,11 +77,11 @@ const DEFAULT_CONFIG: ToolConfig = {
 function StatusIndicator({ status }: { status: ToolCallInfo["status"] }) {
   switch (status) {
     case "running":
-      return <Loader2 size={13} className="animate-spin text-amber-400" />;
+      return <Loader2 size={13} className="animate-spin text-[#d4a88c]" />;
     case "completed":
       return (
-        <span className="flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500/15">
-          <Check size={11} className="text-emerald-400" />
+        <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#5fb8a3]/15">
+          <Check size={11} className="text-[#5fb8a3]" />
         </span>
       );
     case "error":
@@ -134,31 +125,29 @@ export default function ToolCallPanel({ toolCall }: Props) {
   };
 
   return (
-    <div className="overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900 text-sm transition-colors duration-150">
+    <div className="overflow-hidden rounded-xl bg-[#131210] border border-[rgba(255,255,255,0.06)] text-[15px] transition-colors duration-150">
       {/* Header */}
       <button
         type="button"
         onClick={() => setCollapsed((c) => !c)}
-        className="flex w-full items-center gap-2 px-3 py-2 text-left transition-colors duration-150 hover:bg-zinc-800/60"
+        className="flex w-full items-center gap-2 px-3 py-2 text-left transition-colors duration-150 hover:bg-[#1c1917]"
       >
         {/* Tool name badge */}
-        <span
-          className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-medium ${config.color} ${config.bg}`}
-        >
+        <span className={`flex items-center gap-1.5 text-[13px] ${config.color}`}>
           {config.icon}
-          {config.label}
+          <span className="text-[#fafaf9]">{config.label}</span>
         </span>
 
         {/* File path or command */}
         {filePath && (
-          <span className="flex items-center gap-1 truncate text-xs text-zinc-400">
-            <FileCode size={11} className="shrink-0 text-zinc-500" />
+          <span className="flex items-center gap-1 truncate text-[13px] text-[#a8a29e]">
+            <FileCode size={12} className="shrink-0 text-[#57534e]" />
             <span className="truncate font-mono">{filePath}</span>
           </span>
         )}
         {toolCall.toolName === "bash" &&
           typeof args?.command === "string" && (
-            <span className="truncate font-mono text-xs text-zinc-400">
+            <span className="truncate font-mono text-[13px] text-[#78716c]">
               $ {String(args.command)}
             </span>
           )}
@@ -169,8 +158,8 @@ export default function ToolCallPanel({ toolCall }: Props) {
         <StatusIndicator status={toolCall.status} />
 
         {/* Expand toggle */}
-        <span className="text-zinc-600">
-          {collapsed ? <ChevronRight size={12} /> : <ChevronDown size={12} />}
+        <span className="text-[#57534e]">
+          {collapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
         </span>
       </button>
 
@@ -184,13 +173,13 @@ export default function ToolCallPanel({ toolCall }: Props) {
             transition={{ duration: 0.15, ease: "easeOut" }}
             className="overflow-hidden"
           >
-            <div className="border-t border-zinc-800 px-3 py-2.5 font-mono text-xs text-zinc-400 space-y-2">
+            <div className="border-t border-[rgba(255,255,255,0.06)] px-3 py-2.5 font-mono text-[13px] text-[#a8a29e] space-y-2">
               {/* Edit: replacement count */}
               {toolCall.toolName === "edit" && (() => {
                 const edits = args?.edits;
                 if (Array.isArray(edits)) {
                   return (
-                    <div className="text-zinc-500">
+                    <div className="text-[#57534e]">
                       {edits.length} replacement{edits.length !== 1 ? "s" : ""}
                     </div>
                   );
@@ -201,7 +190,7 @@ export default function ToolCallPanel({ toolCall }: Props) {
               {/* Write: content length */}
               {toolCall.toolName === "write" &&
                 typeof args?.content === "string" && (
-                  <div className="text-zinc-500">
+                  <div className="text-[#57534e]">
                     {args.content.length.toLocaleString()} chars
                   </div>
                 )}
@@ -209,9 +198,9 @@ export default function ToolCallPanel({ toolCall }: Props) {
               {/* Bash: full command */}
               {toolCall.toolName === "bash" &&
                 typeof args?.command === "string" && (
-                  <div className="rounded bg-zinc-800/60 px-2 py-1.5 text-xs">
-                    <span className="text-amber-400">$</span>{" "}
-                    <span className="text-zinc-200">
+                  <div className="rounded bg-[#1c1917] px-2 py-1.5 text-[13px]">
+                    <span className="text-[#d4a88c]">$</span>{" "}
+                    <span className="text-[#fafaf9]">
                       {String(args.command)}
                     </span>
                   </div>
@@ -220,14 +209,14 @@ export default function ToolCallPanel({ toolCall }: Props) {
               {/* Output / result */}
               {outputText && (
                 <div>
-                  <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-all rounded-md bg-zinc-800/60 p-2.5 text-xs text-zinc-400">
+                  <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-all rounded-lg bg-[#1c1917] p-2.5 text-[13px] text-[#a8a29e]">
                     {displayOutput}
                   </pre>
                   {isOutputLong && (
                     <button
                       type="button"
                       onClick={() => setShowFullOutput((s) => !s)}
-                      className="mt-1 text-[11px] text-violet-400 transition-colors duration-150 hover:text-violet-300"
+                      className="mt-1 text-[11px] text-[#9d8bb8] transition-colors duration-150 hover:text-[#b8a8c8]"
                     >
                       {showFullOutput ? "Show less" : "Show more"}
                     </button>
@@ -241,7 +230,7 @@ export default function ToolCallPanel({ toolCall }: Props) {
                   <button
                     type="button"
                     onClick={() => setShowArgs((s) => !s)}
-                    className="text-[11px] text-zinc-500 transition-colors duration-150 hover:text-zinc-400"
+                    className="text-[11px] text-[#57534e] transition-colors duration-150 hover:text-[#78716c]"
                   >
                     {showArgs ? "Hide args" : "Show args"}
                   </button>
@@ -252,7 +241,7 @@ export default function ToolCallPanel({ toolCall }: Props) {
                         animate={{ height: "auto", opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
                         transition={{ duration: 0.15 }}
-                        className="mt-1 max-h-48 overflow-auto whitespace-pre-wrap break-all rounded-md bg-zinc-800/60 p-2.5 text-[11px] text-zinc-500"
+                        className="mt-1 max-h-48 overflow-auto whitespace-pre-wrap break-all rounded-lg bg-[#1c1917] p-2.5 text-[11px] text-[#57534e]"
                       >
                         {JSON.stringify(args, null, 2)}
                       </motion.pre>
@@ -266,9 +255,9 @@ export default function ToolCallPanel({ toolCall }: Props) {
                 <button
                   type="button"
                   onClick={handleViewInCanvas}
-                  className="inline-flex items-center gap-1.5 rounded-md bg-violet-500/10 px-2.5 py-1 text-[11px] font-medium text-violet-400 transition-colors duration-150 hover:bg-violet-500/20"
+                  className="inline-flex items-center gap-1.5 rounded-full bg-[#1c1917] px-3 py-1.5 text-[13px] text-[#9d8bb8] transition-colors duration-150 hover:bg-[#262220]"
                 >
-                  <FileCode size={11} />
+                  <FileCode size={12} />
                   View in Canvas
                 </button>
               )}

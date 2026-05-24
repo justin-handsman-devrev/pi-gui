@@ -29,21 +29,21 @@ function CodeBlock({
   }, [codeText]);
 
   return (
-    <div className="group relative my-3 overflow-hidden rounded-md border border-zinc-800 bg-zinc-900">
-      {/* Header bar */}
-      <div className="flex items-center justify-between border-b border-zinc-800 px-3 py-1.5">
-        <span className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">
+    <div className="group relative my-3 overflow-hidden rounded-xl bg-[#1c1917] border border-[rgba(255,255,255,0.06)]">
+      {/* Header bar — minimal */}
+      <div className="flex items-center justify-between border-b border-[rgba(255,255,255,0.06)] px-3 py-2">
+        <span className="text-[11px] uppercase tracking-wider text-[#78716c]">
           {lang || "code"}
         </span>
         <button
           onClick={handleCopy}
-          className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] text-zinc-500 transition-colors duration-150 hover:bg-zinc-800 hover:text-zinc-300"
+          className="text-[#a8a29e] hover:text-[#fafaf9] transition-colors duration-150 flex items-center gap-1 text-[11px]"
           title="Copy code"
         >
           {copied ? (
             <>
-              <Check size={12} className="text-emerald-400" />
-              <span className="text-emerald-400">Copied</span>
+              <Check size={12} className="text-[#5fb8a3]" />
+              <span className="text-[#5fb8a3]">Copied</span>
             </>
           ) : (
             <>
@@ -64,7 +64,7 @@ function CodeBlock({
 
 function InlineCode({ children }: { children?: ReactNode }) {
   return (
-    <code className="rounded border border-zinc-700/50 bg-zinc-800 px-1.5 py-0.5 font-mono text-[0.875em] text-violet-300">
+    <code className="rounded-md bg-[#44403c]/50 px-1.5 py-0.5 font-mono text-[13px] text-[#9d8bb8]">
       {children}
     </code>
   );
@@ -98,14 +98,14 @@ const markdownComponents = {
 
 function StreamingIndicator() {
   return (
-    <span className="inline-flex items-center gap-0.5">
-      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-violet-400" />
+    <span className="inline-flex items-center gap-1">
+      <span className="h-1.5 w-1.5 rounded-full bg-[#9d8bb8] animate-pulse" />
       <span
-        className="h-1.5 w-1.5 animate-pulse rounded-full bg-violet-400"
+        className="h-1.5 w-1.5 rounded-full bg-[#9d8bb8] animate-pulse"
         style={{ animationDelay: "0.15s" }}
       />
       <span
-        className="h-1.5 w-1.5 animate-pulse rounded-full bg-violet-400"
+        className="h-1.5 w-1.5 rounded-full bg-[#9d8bb8] animate-pulse"
         style={{ animationDelay: "0.3s" }}
       />
     </span>
@@ -126,11 +126,11 @@ export default function MessageBubble({ message }: Props) {
     return (
       <div className="flex justify-end gap-2.5">
         <div className="max-w-[80%]">
-          <div className="rounded-lg border-l-[3px] border-l-violet-400 bg-violet-500/10 px-4 py-3 text-sm leading-relaxed text-zinc-100 whitespace-pre-wrap break-words">
+          <div className="rounded-2xl bg-[#44403c] px-4 py-3 text-[15px] leading-[1.6] text-[#fafaf9] whitespace-pre-wrap break-words">
             {message.content}
           </div>
         </div>
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-violet-500/15 text-violet-400">
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#1c1917] text-[#a8a29e]">
           <User size={14} />
         </div>
       </div>
@@ -140,7 +140,7 @@ export default function MessageBubble({ message }: Props) {
   // ── Assistant Message ─────────────────────────────────────────────────
   return (
     <div className="flex gap-2.5">
-      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-zinc-800 text-violet-400">
+      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#1c1917] text-[#9d8bb8]">
         <Bot size={14} />
       </div>
       <div className="min-w-0 max-w-[90%] flex-1 space-y-2">
@@ -166,7 +166,7 @@ export default function MessageBubble({ message }: Props) {
 
         {/* Blinking cursor when streaming with content */}
         {message.isStreaming && message.content && (
-          <span className="inline-block h-4 w-0.5 animate-pulse bg-violet-400 align-text-bottom" />
+          <span className="inline-block h-4 w-0.5 animate-pulse bg-[#9d8bb8] align-text-bottom" />
         )}
 
         {/* Tool calls */}

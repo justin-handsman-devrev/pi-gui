@@ -31,16 +31,16 @@ export default function SidebarFooter() {
   const isStreaming = useAgentStore((s) => s.isStreaming);
 
   return (
-    <div className="shrink-0 border-t border-zinc-800 bg-zinc-950/50 px-3 py-2.5">
+    <div className="shrink-0 border-t border-white/[0.06] bg-[#292524]/30 px-3 py-2.5">
       <div className="flex items-center gap-2">
         {/* Status indicator dot */}
         <span className="relative flex h-2 w-2 shrink-0">
           {isStreaming && (
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-violet-400 opacity-75" />
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#9d8bb8] opacity-75" />
           )}
           <span
             className={`relative inline-flex h-2 w-2 rounded-full ${
-              isStreaming ? "bg-violet-400" : "bg-emerald-400"
+              isStreaming ? "bg-[#9d8bb8]" : "bg-[#5fb8a3]"
             }`}
           />
         </span>
@@ -49,25 +49,25 @@ export default function SidebarFooter() {
         {model ? (
           <div className="flex min-w-0 flex-1 flex-col">
             <div className="flex items-center gap-1.5">
-              <Cpu size={12} className="shrink-0 text-zinc-500" />
-              <span className="truncate text-[12px] font-medium text-zinc-300">
+              <Cpu size={12} className="shrink-0 text-[#78716c]" />
+              <span className="truncate text-[12px] font-medium text-[#fafaf9]">
                 {displayModelName(model)}
               </span>
             </div>
             <div className="mt-0.5 flex items-center gap-1.5 pl-[18px]">
-              <span className="text-[10px] text-zinc-500">
+              <span className="text-[10px] text-[#78716c]">
                 {model.provider}
               </span>
-              <span className="text-zinc-700">·</span>
-              <span className="text-[10px] text-zinc-500">
+              <span className="text-[#57534e]">·</span>
+              <span className="text-[10px] text-[#78716c]">
                 thinking: {displayThinkingLevel(thinkingLevel)}
               </span>
             </div>
           </div>
         ) : (
           <div className="flex min-w-0 flex-1 items-center gap-1.5">
-            <Cpu size={12} className="shrink-0 text-zinc-600" />
-            <span className="text-[12px] text-zinc-600">No model loaded</span>
+            <Cpu size={12} className="shrink-0 text-[#57534e]" />
+            <span className="text-[12px] text-[#57534e]">No model loaded</span>
           </div>
         )}
       </div>

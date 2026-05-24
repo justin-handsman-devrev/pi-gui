@@ -16,6 +16,22 @@ import CanvasPane from "@/canvas/CanvasPane";
 
 const CWD_KEY = "pi-gui-cwd";
 
+// Color tokens - warm darks (ElevenLabs inspired)
+const colors = {
+  canvasPrimary: '#0c0a09',
+  canvasSurface: '#131210',
+  canvasElevated: '#1c1917',
+  ink700: '#44403c',
+  ink500: '#78716c',
+  ink400: '#a8a29e',
+  actionPrimary: '#292524',
+  actionHover: '#44403c',
+  textPrimary: '#fafaf9',
+  textSecondary: '#a8a29e',
+  auroraLavender: '#9d8bb8',
+  auroraRose: '#c98b8b',
+};
+
 export default function App() {
   // Wire up Tauri event listeners
   useAgentEvents();
@@ -64,20 +80,81 @@ export default function App() {
   // ── Startup screen ──────────────────────────────────────────────────────
   if (!agentStarted) {
     return (
-      <div className="flex h-screen flex-col items-center justify-center bg-zinc-950">
+      <div 
+        className="flex h-screen flex-col items-center justify-center relative overflow-hidden"
+        style={{ backgroundColor: colors.canvasPrimary }}
+      >
+        {/* Aurora orb background */}
+        <div 
+          className="absolute pointer-events-none"
+          style={{
+            width: '600px',
+            height: '600px',
+            borderRadius: '50%',
+            background: `radial-gradient(circle, ${colors.auroraLavender}40 0%, transparent 70%)`,
+            filter: 'blur(80px)',
+            opacity: 0.06,
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            animation: 'drift 20s ease-in-out infinite alternate',
+          }}
+        />
+        
+        {/* Additional subtle orb */}
+        <div 
+          className="absolute pointer-events-none"
+          style={{
+            width: '400px',
+            height: '400px',
+            borderRadius: '50%',
+            background: `radial-gradient(circle, ${colors.auroraRose}30 0%, transparent 70%)`,
+            filter: 'blur(60px)',
+            opacity: 0.04,
+            top: '45%',
+            left: '55%',
+            transform: 'translate(-50%, -50%)',
+            animation: 'drift 25s ease-in-out infinite alternate-reverse',
+          }}
+        />
+
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: "easeOut" }}
-          className="max-w-md text-center"
+          transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
+          className="max-w-md text-center relative z-10"
         >
-          {/* Logo */}
+          {/* Logo with radial aurora glow */}
           <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
+            initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.1, ease: "easeOut" }}
+            transition={{ duration: 0.5, delay: 0.1, ease: [0.4, 0, 0.2, 1] }}
+            className="relative inline-block"
           >
-            <span className="gradient-text text-7xl font-bold leading-none">
+            {/* Logo glow */}
+            <div 
+              className="absolute pointer-events-none"
+              style={{
+                width: '120px',
+                height: '120px',
+                borderRadius: '50%',
+                background: `radial-gradient(circle, ${colors.auroraLavender}60 0%, transparent 70%)`,
+                filter: 'blur(24px)',
+                opacity: 0.15,
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+              }}
+            />
+            <span 
+              className="block font-semibold leading-none"
+              style={{ 
+                fontSize: '48px', 
+                letterSpacing: '-1.44px', 
+                lineHeight: '1.05',
+                color: colors.textPrimary,
+              }}
+            >
               π
             </span>
           </motion.div>
@@ -86,7 +163,13 @@ export default function App() {
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: 0.2 }}
-            className="mt-4 text-2xl font-semibold text-zinc-400"
+            className="mt-4 font-medium"
+            style={{ 
+              fontSize: '28px', 
+              letterSpacing: '-0.28px', 
+              lineHeight: '1.12',
+              color: colors.textPrimary,
+            }}
           >
             Pi GUI
           </motion.h1>
@@ -95,7 +178,12 @@ export default function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.4, delay: 0.3 }}
-            className="mt-1 text-sm text-zinc-500"
+            className="mt-1"
+            style={{ 
+              fontSize: '13px', 
+              lineHeight: '1.4',
+              color: colors.textSecondary,
+            }}
           >
             AI Coding Assistant
           </motion.p>
@@ -109,7 +197,14 @@ export default function App() {
                 exit={{ opacity: 0, height: 0 }}
                 className="mt-6 overflow-hidden"
               >
-                <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2.5 text-sm text-red-400">
+                <div 
+                  className="rounded-lg px-4 py-2.5 text-sm"
+                  style={{ 
+                    border: `1px solid ${colors.auroraRose}40`,
+                    backgroundColor: `${colors.auroraRose}10`,
+                    color: colors.auroraRose,
+                  }}
+                >
                   {error}
                 </div>
               </motion.div>
@@ -123,7 +218,10 @@ export default function App() {
             transition={{ duration: 0.4, delay: 0.4 }}
             className="mt-8"
           >
-            <label className="mb-1.5 block text-left text-xs font-medium text-zinc-500">
+            <label 
+              className="mb-1.5 block text-left text-xs font-medium"
+              style={{ color: colors.ink500 }}
+            >
               Working Directory
             </label>
             <div className="flex gap-2">
@@ -136,42 +234,117 @@ export default function App() {
                     handleStart(cwdInput.trim());
                   }
                 }}
-                className="flex-1 rounded-lg border border-zinc-700 bg-zinc-800 px-3.5 py-2.5 font-mono text-sm text-zinc-50 outline-none transition-colors duration-150 placeholder:text-zinc-600 focus:border-violet-500"
+                className="flex-1 px-4 py-2.5 font-mono text-sm outline-none transition-all duration-150"
+                style={{
+                  borderRadius: '9999px',
+                  border: `1px solid ${colors.ink700}`,
+                  backgroundColor: colors.canvasSurface,
+                  color: colors.textPrimary,
+                }}
                 placeholder="~/repos/my-project"
               />
-              <button
+              <motion.button
                 type="button"
                 disabled={starting || !cwdInput.trim()}
                 onClick={() => handleStart(cwdInput.trim())}
-                className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-violet-500 to-indigo-500 px-5 py-2.5 text-sm font-medium text-white transition-all duration-150 hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed"
+                whileTap={{ scale: 0.98 }}
+                className="flex items-center gap-2 px-5 py-2.5 text-sm font-medium transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
+                style={{
+                  borderRadius: '9999px',
+                  backgroundColor: colors.actionPrimary,
+                  color: '#ffffff',
+                }}
+                onMouseEnter={(e) => {
+                  if (!starting && cwdInput.trim()) {
+                    e.currentTarget.style.backgroundColor = colors.actionHover;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = colors.actionPrimary;
+                }}
               >
                 <Terminal size={14} />
                 {starting ? "Starting…" : "Start"}
-              </button>
+              </motion.button>
             </div>
 
-            <p className="mt-3 text-xs text-zinc-600">
-              Make sure <code className="rounded bg-zinc-800 px-1.5 py-0.5 font-mono text-violet-400">pi</code> is installed on your PATH
+            <p 
+              className="mt-3 text-xs"
+              style={{ color: colors.ink500 }}
+            >
+              Make sure <code 
+                className="rounded px-1.5 py-0.5 font-mono"
+                style={{ 
+                  backgroundColor: colors.canvasSurface,
+                  color: colors.auroraLavender,
+                }}
+              >pi</code> is installed on your PATH
             </p>
           </motion.div>
         </motion.div>
+
+        {/* Keyframe animation for aurora drift */}
+        <style>{`
+          @keyframes drift {
+            from {
+              transform: translate(-50%, -50%) translateX(-20px) translateY(-10px);
+            }
+            to {
+              transform: translate(-50%, -50%) translateX(20px) translateY(10px);
+            }
+          }
+        `}</style>
       </div>
     );
   }
 
   // ── Main layout ─────────────────────────────────────────────────────────
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-zinc-950 text-zinc-50">
+    <div 
+      className="flex h-screen flex-col overflow-hidden relative"
+      style={{ 
+        backgroundColor: colors.canvasPrimary,
+        color: colors.textPrimary,
+      }}
+    >
+      {/* Subtle aurora orb behind split panes */}
+      <div 
+        className="absolute pointer-events-none"
+        style={{
+          width: '800px',
+          height: '800px',
+          borderRadius: '50%',
+          background: `radial-gradient(circle, ${colors.auroraLavender}30 0%, transparent 70%)`,
+          filter: 'blur(100px)',
+          opacity: 0.04,
+          top: '30%',
+          right: '-200px',
+        }}
+      />
+
       {/* Top area: Sidebar + Main */}
-      <div className="flex flex-1 min-h-0">
+      <div className="flex flex-1 min-h-0 relative z-10">
         {/* Sidebar */}
         <Sidebar />
 
-        {/* Sidebar collapsed toggle */}
+        {/* Sidebar collapsed toggle - ghost button style */}
         {!sidebarOpen && (
           <button
             onClick={toggleSidebar}
-            className="absolute left-2 top-2 z-20 rounded-md p-1.5 text-zinc-600 transition-colors duration-150 hover:bg-zinc-800 hover:text-zinc-400"
+            className="absolute left-2 top-2 z-20 p-1.5 transition-all duration-150"
+            style={{
+              borderRadius: '9999px',
+              color: colors.ink500,
+              backgroundColor: 'transparent',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = colors.canvasElevated;
+              e.currentTarget.style.color = colors.textSecondary;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.color = colors.ink500;
+            }}
             title="Open sidebar"
           >
             <svg
@@ -207,12 +380,12 @@ export default function App() {
             <PromptInput />
           </Panel>
 
-          {/* Resize handle */}
+          {/* Resize handle - subtle hairline with aurora hover */}
           {canvasVisible && (
             <Separator
-              className="w-px transition-colors duration-150"
+              className="w-px transition-all duration-150 hover:bg-opacity-100"
               style={{
-                backgroundColor: "var(--border-subtle)",
+                backgroundColor: 'rgba(255,255,255,0.06)',
               }}
             />
           )}

@@ -9,6 +9,9 @@ import DiffRenderer from "@/canvas/DiffRenderer";
 /**
  * CanvasPane — the right-side panel that shows live file edits/writes
  * streaming in from the agent, with syntax highlighting and diff view.
+ *
+ * ElevenLabs-inspired design: warm dark ink colors, pill-shaped toggles,
+ * refined aurora accent palette.
  */
 export default function CanvasPane() {
   const tabOrder = useCanvasStore((s) => s.tabOrder);
@@ -22,24 +25,30 @@ export default function CanvasPane() {
 
   const hasFiles = tabOrder.length > 0;
   const activeFile = activeFilePath ? files.get(activeFilePath) : undefined;
+  const filename = activeFile ? activeFile.filePath.split("/").pop() : "";
 
   // ── Collapsed bar ────────────────────────────────────────────────────────
   if (collapsed) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-2 bg-[var(--bg-surface)] pt-4">
+      <div className="flex h-full w-12 flex-col items-center gap-3 border-l border-[rgba(255,255,255,0.06)] bg-[#131210] py-4">
         <button
           type="button"
           onClick={() => setCollapsed(false)}
-          className="rounded-md p-2 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]"
+          className="rounded-lg p-2 text-[#78716c] transition-colors duration-150 hover:bg-[#44403c]/30 hover:text-[#a8a29e]"
           aria-label="Expand canvas"
           data-tooltip="Expand Canvas"
         >
-          <Eye size={18} />
+          <Eye size={16} />
         </button>
+
+        {/* Mini file indicator */}
         {activeFile && (
-          <span className="max-w-[60px] truncate text-center text-[10px] text-[var(--text-faint)]">
-            {activeFile.filePath.split("/").pop()}
-          </span>
+          <div className="flex flex-col items-center gap-1">
+            <div className="h-8 w-0.5 rounded-full bg-[#9d8bb8]/50" />
+            <span className="max-w-[40px] truncate text-center text-[9px] text-[#57534e] [writing-mode:vertical-rl]">
+              {filename}
+            </span>
+          </div>
         )}
       </div>
     );
@@ -47,30 +56,30 @@ export default function CanvasPane() {
 
   // ── Full pane ────────────────────────────────────────────────────────────
   return (
-    <div className="flex h-full flex-col overflow-hidden bg-[var(--bg-surface)]">
+    <div className="flex h-full flex-col overflow-hidden bg-[#131210]">
       {/* Header */}
-      <div className="flex h-10 shrink-0 items-center justify-between border-b border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3">
-        {/* Left: title + file path */}
+      <div className="flex h-11 shrink-0 items-center justify-between border-b border-[rgba(255,255,255,0.06)] bg-[#131210] px-3">
+        {/* Left: text-label + filename */}
         <div className="flex items-center gap-2 min-w-0">
-          <span className="shrink-0 text-xs font-semibold tracking-wide text-[var(--text-secondary)] uppercase">
+          <span className="shrink-0 text-[11px] font-semibold tracking-[0.88px] text-[#78716c] uppercase">
             Canvas
           </span>
-          {activeFile && (
+          {activeFile && filename && (
             <>
-              <span className="text-[var(--text-faint)]">·</span>
+              <span className="text-[#57534e]">·</span>
               <span
-                className="truncate text-xs text-[var(--text-muted)]"
+                className="truncate text-[13px] text-[#a8a29e]"
                 title={activeFile.filePath}
               >
-                {activeFile.filePath}
+                {filename}
               </span>
             </>
           )}
         </div>
 
-        {/* Center: view toggle */}
+        {/* Center: pill toggle */}
         {hasFiles && (
-          <div className="flex items-center gap-0.5 rounded-md bg-[var(--bg-elevated)] p-0.5">
+          <div className="flex items-center gap-0.5 rounded-full bg-[#1c1917] p-0.5">
             <ViewToggleBtn
               active={viewMode === "code"}
               onClick={() => setViewMode("code")}
@@ -86,12 +95,12 @@ export default function CanvasPane() {
           </div>
         )}
 
-        {/* Right: actions */}
+        {/* Right: ghost icon buttons */}
         <div className="flex items-center gap-1">
           <button
             type="button"
             onClick={() => setCollapsed(true)}
-            className="rounded-md p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-hover)] hover:text-[var(--text-secondary)]"
+            className="rounded-lg p-1.5 text-[#78716c] transition-colors duration-150 hover:bg-[#44403c]/30 hover:text-[#a8a29e]"
             aria-label="Minimize canvas"
           >
             <EyeOff size={14} />
@@ -99,7 +108,7 @@ export default function CanvasPane() {
           <button
             type="button"
             onClick={() => setCanvasVisible(false)}
-            className="rounded-md p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-hover)] hover:text-[var(--text-secondary)]"
+            className="rounded-lg p-1.5 text-[#78716c] transition-colors duration-150 hover:bg-[#44403c]/30 hover:text-[#a8a29e]"
             aria-label="Close canvas"
           >
             <X size={14} />
@@ -142,11 +151,11 @@ function ViewToggleBtn({
       type="button"
       onClick={onClick}
       className={`
-        flex items-center gap-1 rounded px-2 py-1 text-xs font-medium transition-all
+        flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-medium transition-all duration-150
         ${
           active
-            ? "bg-[var(--accent-muted)] text-[var(--accent-primary)] shadow-sm"
-            : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
+            ? "bg-[#292524] text-[#fafaf9]"
+            : "text-[#78716c] hover:text-[#a8a29e]"
         }
       `}
     >
@@ -159,14 +168,14 @@ function ViewToggleBtn({
 function EmptyState() {
   return (
     <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
-      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--bg-elevated)]">
-        <Code2 size={24} className="text-[var(--text-faint)]" />
+      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#1c1917]">
+        <Code2 size={24} className="text-[#57534e]" />
       </div>
       <div>
-        <p className="text-sm font-medium text-[var(--text-secondary)]">
+        <p className="text-sm font-medium text-[#a8a29e]">
           No files open
         </p>
-        <p className="mt-1 text-xs text-[var(--text-muted)]">
+        <p className="mt-1 text-xs text-[#78716c]">
           Files will appear here as the agent edits them
         </p>
       </div>

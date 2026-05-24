@@ -5,6 +5,8 @@ import { useCanvasStore } from "@/canvas/canvasStore";
 /**
  * Read-only syntax-highlighted code editor for the active canvas file.
  * Shows line numbers, a streaming cursor, and subtle diff gutter markers.
+ *
+ * ElevenLabs-inspired design: warm dark ink canvas (#0c0a09), aurora-tinted diff lines.
  */
 export default function CanvasEditor() {
   const activeFilePath = useCanvasStore((s) => s.activeFilePath);
@@ -14,14 +16,14 @@ export default function CanvasEditor() {
 
   if (!activeFilePath || !file) {
     return (
-      <div className="flex h-full items-center justify-center bg-[var(--bg-primary)] text-[var(--text-muted)]">
+      <div className="flex h-full items-center justify-center bg-[#0c0a09] text-[#78716c]">
         <p className="text-sm">Select a file to view</p>
       </div>
     );
   }
 
   return (
-    <div className="flex h-full flex-col overflow-hidden bg-[var(--bg-primary)]">
+    <div className="flex h-full flex-col overflow-hidden bg-[#0c0a09]">
       <CodeView
         content={file.currentContent}
         language={file.language}
@@ -95,24 +97,24 @@ function CodeView({ content, language, isStreaming, diffLineTypes }: CodeViewPro
   }, [isStreaming, content]);
 
   // Determine gutter width based on line count digits
-  const gutterWidth = Math.max(3, String(totalLines).length) * 8 + 16;
+  const gutterWidth = Math.max(3, String(totalLines).length) * 8 + 24;
 
   return (
     <div ref={scrollRef} className="flex-1 overflow-auto">
-      <pre className="m-0 flex min-w-full font-mono text-[13px] leading-[20px]" style={{ fontFamily: "var(--font-mono)" }}>
+      <pre className="m-0 flex min-w-full font-mono text-[13px] leading-[22px]" style={{ fontFamily: "var(--font-mono), 'JetBrains Mono', ui-monospace, monospace" }}>
         {/* Line number gutter */}
         <div
-          className="sticky left-0 z-10 shrink-0 select-none border-r border-[var(--border-subtle)] bg-[var(--bg-primary)] text-right"
+          className="sticky left-0 z-10 shrink-0 select-none border-r border-[rgba(255,255,255,0.06)] bg-[#0c0a09] text-right"
           style={{ width: gutterWidth }}
           aria-hidden="true"
         >
           {Array.from({ length: totalLines }, (_, i) => (
-            <div key={i} className="h-5 px-2 text-[11px] leading-[20px] text-[var(--text-faint)]">
+            <div key={i} className="h-[22px] px-3 text-[11px] leading-[22px] text-[#57534e]">
               {i + 1}
             </div>
           ))}
           {isStreaming && (
-            <div className="h-5 px-2 text-[11px] leading-[20px] text-[var(--accent-primary)]">
+            <div className="h-[22px] px-3 text-[11px] leading-[22px] text-[#9d8bb8]">
               ◆
             </div>
           )}
@@ -130,10 +132,10 @@ function CodeView({ content, language, isStreaming, diffLineTypes }: CodeViewPro
               return (
                 <div
                   key={`${block.startLine}-${j}`}
-                  className={`flex h-5 items-start ${diffLineStyle(diffType)}`}
+                  className={`flex h-[22px] items-start ${diffLineStyle(diffType)}`}
                 >
                   <span
-                    className="whitespace-pre"
+                    className="whitespace-pre px-4"
                     dangerouslySetInnerHTML={{ __html: lineHtml || "&nbsp;" }}
                   />
                 </div>
@@ -143,8 +145,8 @@ function CodeView({ content, language, isStreaming, diffLineTypes }: CodeViewPro
 
           {/* Streaming cursor */}
           {isStreaming && (
-            <div className="flex h-5 items-center">
-              <span className="inline-block h-4 w-2 bg-[var(--accent-primary)] cursor-blink" />
+            <div className="flex h-[22px] items-center px-4">
+              <span className="inline-block h-4 w-2 bg-[#9d8bb8] cursor-blink" />
             </div>
           )}
         </code>
@@ -171,14 +173,20 @@ function highlightContent(code: string, language: string | undefined): string {
   }
 }
 
+/**
+ * Diff line styles using aurora palette:
+ * - Additions: aurora-mint (#5fb8a3)
+ * - Removals: aurora-rose (#c494a4)
+ * - Changed: aurora-lavender (#9d8bb8)
+ */
 function diffLineStyle(type: "added" | "removed" | "changed" | undefined): string {
   switch (type) {
     case "added":
-      return "bg-[rgba(16,185,129,0.08)] border-l-2 border-l-emerald-500/60";
+      return "bg-[#5fb8a3]/10 border-l-2 border-l-[#5fb8a3]/60";
     case "removed":
-      return "bg-[rgba(239,68,68,0.06)] border-l-2 border-l-red-500/60 line-through opacity-70";
+      return "bg-[#c494a4]/8 border-l-2 border-l-[#c494a4]/60 line-through opacity-60";
     case "changed":
-      return "bg-[rgba(139,92,246,0.08)] border-l-2 border-l-violet-500/60";
+      return "bg-[#9d8bb8]/8 border-l-2 border-l-[#9d8bb8]/60";
     default:
       return "";
   }

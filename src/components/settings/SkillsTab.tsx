@@ -118,13 +118,13 @@ function Toggle({ checked, onChange, label }: ToggleProps) {
       onClick={() => onChange(!checked)}
       className={`
         relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full
-        transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-violet-500
-        ${checked ? "bg-violet-500" : "bg-zinc-700"}
+        transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-[#9d8bb8]
+        ${checked ? "bg-[#5fb8a3]" : "bg-[#44403c]"}
       `}
     >
       <span
         className={`
-          pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow-sm
+          pointer-events-none inline-block h-4 w-4 rounded-full bg-[#fafaf9] shadow-sm
           transition-transform duration-150
           ${checked ? "translate-x-[18px]" : "translate-x-0"}
         `}
@@ -136,6 +136,12 @@ function Toggle({ checked, onChange, label }: ToggleProps) {
 
 // ── Skills Tab ───────────────────────────────────────────────────────────────
 
+/**
+ * Skills tab with ElevenLabs-inspired warm dark design:
+ * - Aurora-mint (#5fb8a3) for enabled toggle switches
+ * - Warm ink backgrounds for cards
+ * - Hover states on ink-700
+ */
 export default function SkillsTab() {
   const [skills, setSkills] = useState<Skill[]>(INITIAL_SKILLS);
 
@@ -151,14 +157,14 @@ export default function SkillsTab() {
     <div className="space-y-4">
       {/* Header */}
       <div>
-        <h3 className="flex items-center gap-2 text-sm font-semibold text-zinc-50">
-          <Puzzle size={16} />
+        <h3 className="flex items-center gap-2 text-sm font-semibold text-[#fafaf9]">
+          <Puzzle size={16} className="text-[#9d8bb8]" />
           Skills &amp; Extensions
         </h3>
-        <p className="mt-1 text-xs text-zinc-500">
+        <p className="mt-1 text-xs text-[#57534e]">
           Manage agent skills and extensions. Skills add specialized capabilities
           to the Pi agent.{" "}
-          <span className="text-zinc-400">
+          <span className="text-[#78716c]">
             {enabledCount} of {skills.length} enabled
           </span>
         </p>
@@ -173,20 +179,20 @@ export default function SkillsTab() {
               flex items-start gap-3 rounded-lg border p-3 transition-colors duration-150
               ${
                 skill.enabled
-                  ? "border-zinc-700/50 bg-zinc-800/50"
-                  : "border-zinc-800/50 bg-zinc-900/50 opacity-60"
+                  ? "border-[#44403c]/50 bg-[#1c1917]/80"
+                  : "border-[#44403c]/20 bg-[#1c1917]/30 opacity-60"
               }
             `}
           >
             {/* Icon */}
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-zinc-800 text-lg">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#292524] text-lg">
               {skill.icon}
             </div>
 
             {/* Info */}
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
-                <p className="truncate text-sm font-medium text-zinc-100">
+                <p className="truncate text-sm font-medium text-[#fafaf9]">
                   {skill.name}
                 </p>
                 {skill.docsUrl && (
@@ -194,15 +200,15 @@ export default function SkillsTab() {
                     href={skill.docsUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="shrink-0 text-zinc-600 transition-colors hover:text-zinc-400"
+                    className="shrink-0 text-[#57534e] transition-colors duration-150 hover:text-[#78716c]"
                     aria-label={`${skill.name} documentation`}
                   >
                     <ExternalLink size={12} />
                   </a>
                 )}
               </div>
-              <p className="mt-0.5 text-xs text-zinc-500">{skill.description}</p>
-              <p className="mt-1 font-mono text-[10px] text-zinc-600">
+              <p className="mt-0.5 text-xs text-[#78716c]">{skill.description}</p>
+              <p className="mt-1 font-mono text-[10px] text-[#57534e]">
                 {skill.source}
               </p>
             </div>

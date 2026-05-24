@@ -7,6 +7,7 @@ import {
   Hash,
   Terminal,
   Folder,
+  X,
 } from "lucide-react";
 import { useCanvasStore } from "@/canvas/canvasStore";
 import { basename } from "@/lib/path-utils";
@@ -14,12 +15,15 @@ import { basename } from "@/lib/path-utils";
 /**
  * Horizontal file tab bar for the canvas pane.
  * Shows streaming indicators and file-type icons.
+ *
+ * ElevenLabs-inspired design: warm dark ink colors,
+ * pill-shaped active tabs with aurora accents.
  */
 
 // ── File icon by language ────────────────────────────────────────────────────
 
 function FileIcon({ language }: { language: string | undefined }) {
-  const props = { size: 13, className: "shrink-0" };
+  const props = { size: 14, className: "shrink-0" };
 
   switch (language) {
     case "typescript":
@@ -72,9 +76,13 @@ export default function CanvasTabs() {
   return (
     <div
       ref={scrollRef}
-      className="flex h-9 shrink-0 items-stretch overflow-x-auto border-b border-[var(--border-subtle)] bg-[var(--bg-primary)]"
+      className="flex h-8 shrink-0 items-center gap-0.5 overflow-x-auto border-b border-[rgba(255,255,255,0.06)] bg-[#0c0a09] px-2"
       role="tablist"
       aria-label="Open files"
+      style={{
+        scrollbarWidth: "none",
+        msOverflowStyle: "none",
+      }}
     >
       {tabOrder.map((filePath) => {
         const isActive = filePath === activeFilePath;
@@ -90,12 +98,12 @@ export default function CanvasTabs() {
             title={filePath}
             onClick={() => setActiveFile(filePath)}
             className={`
-              group relative flex h-full shrink-0 items-center gap-1.5 border-b-2
-              px-3 text-xs font-medium transition-colors
+              group relative flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1
+              text-[13px] whitespace-nowrap transition-colors duration-150
               ${
                 isActive
-                  ? "border-[var(--accent-primary)] bg-[var(--bg-surface)] text-[var(--text-primary)]"
-                  : "border-transparent text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-secondary)]"
+                  ? "bg-[#292524] text-[#fafaf9]"
+                  : "text-[#78716c] hover:bg-[#44403c]/30 hover:text-[#a8a29e]"
               }
             `}
           >
@@ -105,8 +113,8 @@ export default function CanvasTabs() {
             {/* Streaming indicator */}
             {isStreaming && (
               <span className="relative flex h-2 w-2 shrink-0">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--accent-primary)] opacity-75" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-[var(--accent-primary)]" />
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#9d8bb8] opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-[#9d8bb8]" />
               </span>
             )}
 
@@ -124,12 +132,11 @@ export default function CanvasTabs() {
                   handleClose(e, filePath);
                 }
               }}
-              className="ml-1 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded
-                text-[var(--text-faint)] opacity-0 transition-all
-                hover:bg-[var(--bg-active)] hover:text-[var(--text-secondary)]
+              className="ml-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded opacity-0 transition-all duration-150
+                text-[#57534e] hover:bg-[#44403c]/50 hover:text-[#a8a29e]
                 group-hover:opacity-100"
             >
-              ×
+              <X size={12} />
             </span>
           </button>
         );

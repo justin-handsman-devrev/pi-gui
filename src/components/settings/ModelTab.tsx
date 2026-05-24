@@ -19,20 +19,23 @@ const THINKING_LEVELS = [
   { value: "xhigh", label: "XHigh" },
 ] as const;
 
-const PROVIDER_COLORS: Record<string, string> = {
-  anthropic: "bg-orange-500/15 text-orange-400 border-orange-500/25",
-  openai: "bg-emerald-500/15 text-emerald-400 border-emerald-500/25",
-  google: "bg-blue-500/15 text-blue-400 border-blue-500/25",
-  ollama: "bg-sky-500/15 text-sky-400 border-sky-500/25",
-  openrouter: "bg-purple-500/15 text-purple-400 border-purple-500/25",
+/**
+ * Provider badge styles using warm ink and aurora tones
+ */
+const PROVIDER_STYLES: Record<string, string> = {
+  anthropic: "bg-[#d4a88c]/15 text-[#d4a88c] border-[#d4a88c]/25",
+  openai: "bg-[#5fb8a3]/15 text-[#5fb8a3] border-[#5fb8a3]/25",
+  google: "bg-[#9d8bb8]/15 text-[#9d8bb8] border-[#9d8bb8]/25",
+  ollama: "bg-[#78716c]/15 text-[#a8a29e] border-[#78716c]/25",
+  openrouter: "bg-[#c494a4]/15 text-[#c494a4] border-[#c494a4]/25",
 };
 
 const DEFAULT_PROVIDER_STYLE =
-  "bg-zinc-500/15 text-zinc-400 border-zinc-500/25";
+  "bg-[#44403c]/30 text-[#78716c] border-[#44403c]/40";
 
 function providerStyle(provider: string) {
   const key = provider.toLowerCase();
-  for (const [k, v] of Object.entries(PROVIDER_COLORS)) {
+  for (const [k, v] of Object.entries(PROVIDER_STYLES)) {
     if (key.includes(k)) return v;
   }
   return DEFAULT_PROVIDER_STYLE;
@@ -48,23 +51,60 @@ function formatContextWindow(tokens: number): string {
 
 function SkeletonCard() {
   return (
-    <div className="animate-pulse rounded-lg border border-zinc-800 bg-zinc-800/50 p-3">
+    <div className="animate-pulse rounded-lg border border-[#44403c]/30 bg-[#1c1917]/50 p-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="h-4 w-16 rounded bg-zinc-700" />
-          <div className="h-4 w-28 rounded bg-zinc-700" />
+          <div className="h-4 w-16 rounded bg-[#292524]" />
+          <div className="h-4 w-28 rounded bg-[#292524]" />
         </div>
         <div className="flex items-center gap-2">
-          <div className="h-4 w-10 rounded bg-zinc-700" />
-          <div className="h-4 w-14 rounded bg-zinc-700" />
+          <div className="h-4 w-10 rounded bg-[#292524]" />
+          <div className="h-4 w-14 rounded bg-[#292524]" />
         </div>
       </div>
     </div>
   );
 }
 
+// ── Thinking Level Selector (Segmented Pill) ─────────────────────────────────
+
+interface ThinkingSelectorProps {
+  currentLevel: string;
+  onChange: (level: string) => void;
+}
+
+function ThinkingSelector({ currentLevel, onChange }: ThinkingSelectorProps) {
+  return (
+    <div className="flex items-center gap-0.5 rounded-full bg-[#44403c]/30 p-0.5">
+      {THINKING_LEVELS.map(({ value, label }) => {
+        const isActive = currentLevel === value;
+        return (
+          <button
+            key={value}
+            onClick={() => onChange(value)}
+            aria-pressed={isActive}
+            className={`
+              relative rounded-full px-3 py-1.5 text-[12px] font-medium transition-colors duration-150
+              ${isActive ? "bg-[#292524] text-[#fafaf9]" : "text-[#78716c] hover:text-[#a8a29e]"}
+            `}
+          >
+            {label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 // ── Component ────────────────────────────────────────────────────────────────
 
+/**
+ * Model settings tab with ElevenLabs-inspired design:
+ * - Warm ink backgrounds (#1c1917, #292524)
+ * - Aurora accents for provider badges
+ * - Pill-shaped segmented control for thinking levels
+ * - Aurora-lavender accent for active model
+ */
 export default function ModelTab() {
   const model = useAgentStore((s) => s.model);
   const storeThinkingLevel = useAgentStore((s) => s.thinkingLevel);
@@ -133,32 +173,33 @@ export default function ModelTab() {
       {/* ── Active Model Card ─────────────────────────────────────────────── */}
       <section>
         <div className="flex items-center gap-2 mb-3">
-          <Sparkles size={16} className="text-violet-400" />
-          <h3 className="text-sm font-medium text-zinc-200">Active Model</h3>
+          <Sparkles size={16} className="text-[#9d8bb8]" />
+          <h3 className="text-sm font-medium text-[#a8a29e]">Active Model</h3>
         </div>
 
         {model ? (
-          <div className="flex items-center gap-3 rounded-lg border border-zinc-700 bg-zinc-800 p-4">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-violet-500/15">
-              <Cpu size={18} className="text-violet-400" />
+          <div className="flex items-center gap-3 rounded-lg border border-[#44403c]/40 bg-[#1c1917] p-4">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#9d8bb8]/15">
+              <Cpu size={18} className="text-[#9d8bb8]" />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-zinc-100">
+              <p className="truncate text-sm font-medium text-[#fafaf9]">
                 {model.id}
               </p>
               <span
-                className={`mt-1 inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${providerStyle(model.provider)}`}
+                className={`mt-1 inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${providerStyle(model.provider)}`
+              }
               >
                 {model.provider}
               </span>
             </div>
           </div>
         ) : (
-          <div className="flex items-center gap-3 rounded-lg border border-zinc-800 bg-zinc-800/50 p-4">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-zinc-700">
-              <Cpu size={18} className="text-zinc-500" />
+          <div className="flex items-center gap-3 rounded-lg border border-[#44403c]/30 bg-[#1c1917]/50 p-4">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#44403c]">
+              <Cpu size={18} className="text-[#57534e]" />
             </div>
-            <p className="text-sm text-zinc-500">No model loaded</p>
+            <p className="text-sm text-[#57534e]">No model loaded</p>
           </div>
         )}
       </section>
@@ -166,44 +207,25 @@ export default function ModelTab() {
       {/* ── Thinking Level ────────────────────────────────────────────────── */}
       <section>
         <div className="flex items-center gap-2 mb-3">
-          <Cpu size={16} className="text-violet-400" />
-          <h3 className="text-sm font-medium text-zinc-200">Thinking Level</h3>
+          <Cpu size={16} className="text-[#9d8bb8]" />
+          <h3 className="text-sm font-medium text-[#a8a29e]">Thinking Level</h3>
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          {THINKING_LEVELS.map(({ value, label }) => {
-            const isActive = storeThinkingLevel === value;
-            return (
-              <button
-                key={value}
-                onClick={() => handleThinkingLevel(value)}
-                aria-pressed={isActive}
-                className={`
-                  rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors duration-150
-                  focus-visible:outline-2 focus-visible:outline-violet-500
-                  ${
-                    isActive
-                      ? "bg-violet-500 text-white shadow-sm shadow-violet-500/25"
-                      : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-300"
-                  }
-                `}
-              >
-                {label}
-              </button>
-            );
-          })}
-        </div>
+        <ThinkingSelector
+          currentLevel={storeThinkingLevel}
+          onChange={handleThinkingLevel}
+        />
       </section>
 
       {/* ── Available Models ──────────────────────────────────────────────── */}
       <section>
         <div className="flex items-center gap-2 mb-3">
-          <Cpu size={16} className="text-violet-400" />
-          <h3 className="text-sm font-medium text-zinc-200">
+          <Cpu size={16} className="text-[#9d8bb8]" />
+          <h3 className="text-sm font-medium text-[#a8a29e]">
             Available Models
           </h3>
           {loading && (
-            <Loader2 size={14} className="animate-spin text-zinc-500" />
+            <Loader2 size={14} className="animate-spin text-[#57534e]" />
           )}
         </div>
 
@@ -218,8 +240,8 @@ export default function ModelTab() {
 
         {/* Error state */}
         {!loading && error && (
-          <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-4">
-            <p className="text-sm text-red-400">
+          <div className="rounded-lg border border-[#c494a4]/20 bg-[#c494a4]/10 p-4">
+            <p className="text-sm text-[#c494a4]">
               Failed to load models: {error}
             </p>
           </div>
@@ -227,10 +249,10 @@ export default function ModelTab() {
 
         {/* Empty state */}
         {!loading && !error && models.length === 0 && (
-          <div className="rounded-lg border border-zinc-800 bg-zinc-800/50 p-6 text-center">
-            <Cpu size={24} className="mx-auto mb-2 text-zinc-600" />
-            <p className="text-sm text-zinc-500">No models available</p>
-            <p className="mt-1 text-xs text-zinc-600">
+          <div className="rounded-lg border border-[#44403c]/30 bg-[#1c1917]/50 p-6 text-center">
+            <Cpu size={24} className="mx-auto mb-2 text-[#57534e]" />
+            <p className="text-sm text-[#57534e]">No models available</p>
+            <p className="mt-1 text-xs text-[#44403c]">
               Check your provider configuration and API keys.
             </p>
           </div>
@@ -251,13 +273,13 @@ export default function ModelTab() {
                   onClick={() => handleSelectModel(m)}
                   disabled={isSwitching}
                   className={`
-                    group w-full rounded-lg border bg-zinc-800/50 p-3 text-left
+                    group w-full rounded-lg border p-3 text-left
                     transition-colors duration-150
-                    focus-visible:outline-2 focus-visible:outline-violet-500
+                    focus-visible:outline-2 focus-visible:outline-[#9d8bb8]
                     ${
                       isActive
-                        ? "border-violet-500/40 bg-violet-500/5"
-                        : "border-zinc-800 hover:border-zinc-700 hover:bg-zinc-800"
+                        ? "border-[#9d8bb8]/40 bg-[#9d8bb8]/5"
+                        : "border-[#44403c]/30 bg-[#1c1917]/50 hover:border-[#44403c]/50 hover:bg-[#1c1917]"
                     }
                     ${isSwitching ? "opacity-60 cursor-wait" : "cursor-pointer"}
                   `}
@@ -270,19 +292,19 @@ export default function ModelTab() {
                       >
                         {m.provider}
                       </span>
-                      <span className="truncate text-sm text-zinc-200 group-hover:text-zinc-100">
+                      <span className="truncate text-sm text-[#a8a29e] group-hover:text-[#fafaf9]">
                         {m.id}
                       </span>
                     </div>
 
                     {/* Right: meta badges */}
                     <div className="flex shrink-0 items-center gap-2">
-                      <span className="rounded bg-zinc-700/60 px-1.5 py-0.5 text-[10px] font-medium text-zinc-400 tabular-nums">
+                      <span className="rounded bg-[#44403c]/50 px-1.5 py-0.5 text-[10px] font-medium text-[#78716c] tabular-nums">
                         {formatContextWindow(m.contextWindow)} ctx
                       </span>
 
                       {m.reasoning && (
-                        <span className="rounded bg-violet-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-violet-400">
+                        <span className="rounded bg-[#9d8bb8]/15 px-1.5 py-0.5 text-[10px] font-semibold text-[#9d8bb8]">
                           Reasoning
                         </span>
                       )}
@@ -290,10 +312,10 @@ export default function ModelTab() {
                       {isSwitching ? (
                         <Loader2
                           size={14}
-                          className="animate-spin text-violet-400"
+                          className="animate-spin text-[#9d8bb8]"
                         />
                       ) : isActive ? (
-                        <Check size={14} className="text-violet-400" />
+                        <Check size={14} className="text-[#9d8bb8]" />
                       ) : null}
                     </div>
                   </div>

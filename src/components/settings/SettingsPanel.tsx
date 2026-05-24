@@ -41,6 +41,12 @@ const panelVariants = {
   },
 };
 
+/**
+ * Settings panel with ElevenLabs-inspired design:
+ * - Warm dark ink colors (#131210, #1c1917)
+ * - Pill-shaped active tabs with aurora lavender accent
+ * - layoutId animation for smooth tab transitions
+ */
 export default function SettingsPanel() {
   const settingsOpen = useUIStore((s) => s.settingsOpen);
   const setSettingsOpen = useUIStore((s) => s.setSettingsOpen);
@@ -81,7 +87,7 @@ export default function SettingsPanel() {
 
           {/* Panel */}
           <motion.div
-            className="fixed inset-y-0 right-0 z-[101] flex w-full max-w-[600px] flex-col border-l border-[var(--border-default)] bg-zinc-900 shadow-2xl"
+            className="fixed inset-y-0 right-0 z-[101] flex w-full max-w-[600px] flex-col border-l border-[rgba(255,255,255,0.06)] bg-[#131210] shadow-2xl"
             variants={panelVariants}
             initial="hidden"
             animate="visible"
@@ -91,44 +97,39 @@ export default function SettingsPanel() {
             data-tauri-drag-region="false"
           >
             {/* Header */}
-            <div className="flex items-center justify-between border-b border-[var(--border-subtle)] px-6 py-4">
-              <h2 className="text-lg font-semibold text-zinc-50">Settings</h2>
+            <div className="flex items-center justify-between border-b border-[rgba(255,255,255,0.06)] px-6 py-4">
+              <h2 className="text-lg font-semibold text-[#fafaf9]">Settings</h2>
               <button
                 onClick={close}
-                className="rounded-lg p-1.5 text-zinc-400 transition-colors duration-150 hover:bg-zinc-800 hover:text-zinc-200"
+                className="rounded-lg p-1.5 text-[#78716c] transition-colors duration-150 hover:bg-[#44403c]/30 hover:text-[#a8a29e]"
                 aria-label="Close settings"
               >
                 <X size={18} />
               </button>
             </div>
 
-            {/* Tab bar */}
-            <div className="flex items-center gap-1 border-b border-[var(--border-subtle)] px-6 py-2">
+            {/* Tab bar — pill tabs with layoutId */}
+            <div className="flex items-center gap-1 border-b border-[rgba(255,255,255,0.06)] px-6 py-3">
               {TABS.map((tab) => {
                 const isActive = activeTab === tab.id;
                 return (
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`
-                      relative rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors duration-150
-                      ${
-                        isActive
-                          ? "bg-violet-500/15 text-violet-400"
-                          : "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-300"
-                      }
-                    `}
+                    className="relative rounded-full px-4 py-2 text-[14px] font-medium transition-colors duration-150"
                     role="tab"
                     aria-selected={isActive}
                   >
                     {isActive && (
                       <motion.div
-                        layoutId="settings-tab-indicator"
-                        className="absolute inset-0 rounded-full bg-violet-500/15"
+                        layoutId="settings-active"
+                        className="absolute inset-0 rounded-full bg-[#44403c]/40"
                         transition={{ type: "spring", stiffness: 400, damping: 30 }}
                       />
                     )}
-                    <span className="relative z-10">{tab.label}</span>
+                    <span className={`relative z-10 ${isActive ? "text-[#fafaf9]" : "text-[#78716c] hover:text-[#a8a29e]"}`}>
+                      {tab.label}
+                    </span>
                   </button>
                 );
               })}

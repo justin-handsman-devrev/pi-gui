@@ -1,76 +1,138 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss";
 
 /* ═══════════════════════════════════════════════════════════════════════════════
-   π Design System — Premium Dark Theme
-   Inspired by Linear.app & Arc browser
+   π Design System — ElevenLabs-Inspired Dark Editorial
+   
+   Adapts the warm, refined ElevenLabs aesthetic to a dark developer tool.
+   - Warm near-blacks instead of cold zinc
+   - Atmospheric aurora gradient orbs (dark mode take on pastels)
+   - Pill geometry for all interactive elements
+   - Strict typography hierarchy with negative tracking on display
    ═══════════════════════════════════════════════════════════════════════════════ */
 
-/* ── Design Tokens (CSS Custom Properties) ─────────────────────────────────── */
+/* ── Design Tokens ─────────────────────────────────────────────────────────── */
 
 :root {
-  /* Backgrounds */
-  --bg-primary:    #09090b;        /* zinc-950 — main canvas */
-  --bg-surface:    #18181b;        /* zinc-900 — panels, sidebar */
-  --bg-elevated:   #27272a;        /* zinc-800 — cards, dropdowns, popovers */
-  --bg-hover:      rgba(255,255,255,0.04);
-  --bg-active:     rgba(255,255,255,0.08);
-  --bg-glass:      rgba(24,24,27,0.72);
-  --bg-glass-strong: rgba(24,24,27,0.88);
+  /* Ink Scale — Warm near-blacks (ElevenLabs warmth) */
+  --ink-950: #0c0a09;        /* Deepest — terminal black */
+  --ink-900: #1c1917;        /* Canvas deep — sidebar bg */
+  --ink-800: #292524;        /* Primary ink — panels */
+  --ink-700: #44403c;        /* Elevated surfaces */
+  --ink-600: #57534e;        /* Borders */
+  --ink-500: #78716c;        /* Muted text */
+  --ink-400: #a8a29e;        /* Soft muted */
+  --ink-300: #d6d3d1;        /* Light ink */
+  --ink-200: #e7e5e4;        /* Hairlines */
+  --ink-100: #f5f5f4;        /* Near white */
 
-  /* Borders */
-  --border-subtle:  rgba(255,255,255,0.06);
-  --border-default: rgba(255,255,255,0.1);
-  --border-active:  rgba(255,255,255,0.2);
+  /* Canvas — Off-white → warm dark gradient */
+  --canvas-primary: #0c0a09;      /* Main bg */
+  --canvas-surface: #131210;      /* Panels */
+  --canvas-elevated: #1c1917;     /* Cards, popovers */
+  --canvas-hover: rgba(255,255,255,0.04);
+  --canvas-active: rgba(255,255,255,0.08);
+  --canvas-glass: rgba(19,18,16,0.72);
+  --canvas-glass-strong: rgba(19,18,16,0.88);
+
+  /* Aurora Accents — Dark mode versions of ElevenLabs pastels */
+  /* These glow softly, never saturated */
+  --aurora-mint: #5fb8a3;
+  --aurora-mint-subtle: rgba(95,184,163,0.15);
+  --aurora-mint-glow: 0 0 20px rgba(95,184,163,0.2);
+  --aurora-peach: #d4a88c;
+  --aurora-peach-subtle: rgba(212,168,140,0.15);
+  --aurora-peach-glow: 0 0 20px rgba(212,168,140,0.2);
+  --aurora-lavender: #9d8bb8;
+  --aurora-lavender-subtle: rgba(157,139,184,0.15);
+  --aurora-lavender-glow: 0 0 20px rgba(157,139,184,0.2);
+  --aurora-sky: #7da8c8;
+  --aurora-sky-subtle: rgba(125,168,200,0.15);
+  --aurora-sky-glow: 0 0 20px rgba(125,168,200,0.2);
+  --aurora-rose: #c494a4;
+  --aurora-rose-subtle: rgba(196,148,164,0.15);
+  --aurora-rose-glow: 0 0 20px rgba(196,148,164,0.2);
+
+  /* Primary Action — Warm near-black pill */
+  --action-primary: #292524;
+  --action-primary-hover: #3d3833;
+  --action-primary-active: #1c1917;
+  --action-text: #fafaf9;
+
+  /* Semantic — Adapted for dark warmth */
+  --success: #5fb8a3;           /* Aurora mint */
+  --success-subtle: rgba(95,184,163,0.15);
+  --warning: #d4a88c;           /* Aurora peach */
+  --warning-subtle: rgba(212,168,140,0.15);
+  --error: #c494a4;             /* Aurora rose */
+  --error-subtle: rgba(196,148,164,0.20);
+  --info: #7da8c8;              /* Aurora sky */
+  --info-subtle: rgba(125,168,200,0.15);
+
+  /* Hairlines — Warm grays */
+  --hairline: rgba(255,255,255,0.06);
+  --hairline-strong: rgba(255,255,255,0.10);
+  --hairline-active: rgba(255,255,255,0.18);
 
   /* Text */
-  --text-primary:   #fafafa;       /* zinc-50 */
-  --text-secondary: #a1a1aa;       /* zinc-400 */
-  --text-muted:     #71717a;       /* zinc-500 */
-  --text-faint:     #52525b;       /* zinc-600 */
+  --text-primary: #fafaf9;      /* Warm white */
+  --text-secondary: #a8a29e;     /* Warm muted */
+  --text-tertiary: #78716c;      /* Soft muted */
+  --text-muted: #57534e;         /* Faint */
 
-  /* Accent — Brand (violet/indigo) */
-  --accent-primary:  #8b5cf6;      /* violet-500 */
-  --accent-hover:    #7c3aed;      /* violet-600 */
-  --accent-muted:    rgba(139,92,246,0.15);
-  --accent-gradient: linear-gradient(135deg, #8b5cf6, #6366f1);
+  /* Shadows — Soft, warm */
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.5);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
+  --shadow-lg: 0 8px 30px rgba(0,0,0,0.5);
+  --shadow-orb: 0 0 60px 20px rgba(125,168,200,0.08);
 
-  /* Semantic */
-  --success:       #10b981;        /* emerald-500 */
-  --success-muted: rgba(16,185,129,0.15);
-  --warning:       #f59e0b;        /* amber-500 */
-  --warning-muted: rgba(245,158,11,0.15);
-  --error:         #ef4444;        /* red-500 */
-  --error-muted:   rgba(239,68,68,0.15);
-  --info:          #3b82f6;        /* blue-500 */
-  --info-muted:    rgba(59,130,246,0.15);
+  /* Radius — ElevenLabs pill geometry */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-xxl: 24px;
+  --radius-pill: 9999px;
 
-  /* Shadows */
-  --shadow-sm:    0 1px 2px rgba(0,0,0,0.4);
-  --shadow-md:    0 4px 12px rgba(0,0,0,0.5);
-  --shadow-lg:    0 8px 30px rgba(0,0,0,0.6);
-  --shadow-glow:  0 0 20px rgba(139,92,246,0.15);
-  --shadow-glow-strong: 0 0 40px rgba(139,92,246,0.25);
+  /* Typography — Strict hierarchy */
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: "JetBrains Mono", "SF Mono", "Fira Code", monospace;
+  
+  /* Scale with negative tracking on display */
+  --text-mega: 48px;
+  --text-mega-leading: 1.05;
+  --text-mega-tracking: -1.44px;
+  
+  --text-xl: 36px;
+  --text-xl-leading: 1.08;
+  --text-xl-tracking: -0.72px;
+  
+  --text-lg: 28px;
+  --text-lg-leading: 1.12;
+  --text-lg-tracking: -0.28px;
+  
+  --text-md: 20px;
+  --text-md-leading: 1.35;
+  --text-md-tracking: 0;
+  
+  --text-sm: 18px;
+  --text-sm-leading: 1.44;
+  --text-sm-tracking: 0.18px;
+  
+  --text-body: 15px;
+  --text-body-leading: 1.5;
+  --text-body-tracking: 0.15px;
+  
+  --text-caption: 13px;
+  --text-caption-leading: 1.4;
+  --text-caption-tracking: 0;
+  
+  --text-label: 11px;
+  --text-label-leading: 1.3;
+  --text-label-tracking: 0.88px;
 
-  /* Radii */
-  --radius-sm:  4px;
-  --radius-md:  8px;
-  --radius-lg:  12px;
-  --radius-xl:  16px;
-  --radius-full: 9999px;
-
-  /* Transitions */
-  --transition-fast:   100ms ease;
-  --transition-normal: 150ms ease;
-  --transition-slow:   250ms ease;
-  --transition-spring: 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
-
-  /* Typography */
-  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-    "Helvetica Neue", Arial, sans-serif;
-  --font-mono: "JetBrains Mono", "Fira Code", "SF Mono", "Cascadia Code",
-    Consolas, "Liberation Mono", Menlo, monospace;
-
-  /* Spacing (for consistent use in calc) */
+  /* Spacing — ElevenLabs base unit (4px) */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -78,13 +140,20 @@
   --space-5: 20px;
   --space-6: 24px;
   --space-8: 32px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-24: 96px;
+
+  /* Transitions */
+  --transition-fast: 100ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-spring: 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 /* ── Base Reset & Global Styles ────────────────────────────────────────────── */
 
-*,
-*::before,
-*::after {
+*, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
@@ -101,31 +170,28 @@ html {
 
 body {
   font-family: var(--font-sans);
-  background: var(--bg-primary);
+  font-size: var(--text-body);
+  line-height: var(--text-body-leading);
+  letter-spacing: var(--text-body-tracking);
+  background: var(--canvas-primary);
   color: var(--text-primary);
-  line-height: 1.6;
   overflow: hidden; /* Tauri manages chrome */
 }
 
 /* Smooth transitions on interactive elements */
-a,
-button,
-input,
-select,
-textarea,
-[role="button"] {
+a, button, input, select, textarea, [role="button"] {
   transition: all var(--transition-normal);
 }
 
 /* Selection */
 ::selection {
-  background: rgba(139,92,246,0.3);
+  background: var(--aurora-lavender-subtle);
   color: var(--text-primary);
 }
 
 /* Focus rings — accessible + beautiful */
 :focus-visible {
-  outline: 2px solid var(--accent-primary);
+  outline: 2px solid var(--aurora-lavender);
   outline-offset: 2px;
   border-radius: var(--radius-sm);
 }
@@ -134,7 +200,234 @@ textarea,
   outline: none;
 }
 
-/* ── Custom Scrollbar ──────────────────────────────────────────────────────── */
+/* ── Typography Classes ────────────────────────────────────────────────────── */
+
+.text-mega {
+  font-size: var(--text-mega);
+  line-height: var(--text-mega-leading);
+  letter-spacing: var(--text-mega-tracking);
+  font-weight: 600;
+}
+
+.text-xl {
+  font-size: var(--text-xl);
+  line-height: var(--text-xl-leading);
+  letter-spacing: var(--text-xl-tracking);
+  font-weight: 500;
+}
+
+.text-lg {
+  font-size: var(--text-lg);
+  line-height: var(--text-lg-leading);
+  letter-spacing: var(--text-lg-tracking);
+  font-weight: 500;
+}
+
+.text-md {
+  font-size: var(--text-md);
+  line-height: var(--text-md-leading);
+  font-weight: 500;
+}
+
+.text-sm {
+  font-size: var(--text-sm);
+  line-height: var(--text-sm-leading);
+  letter-spacing: var(--text-sm-tracking);
+  font-weight: 500;
+}
+
+.text-body {
+  font-size: var(--text-body);
+  line-height: var(--text-body-leading);
+  letter-spacing: var(--text-body-tracking);
+}
+
+.text-caption {
+  font-size: var(--text-caption);
+  line-height: var(--text-caption-leading);
+  color: var(--text-secondary);
+}
+
+.text-label {
+  font-size: var(--text-label);
+  line-height: var(--text-label-leading);
+  letter-spacing: var(--text-label-tracking);
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--text-tertiary);
+}
+
+/* ── Aurora Gradient Orbs ─────────────────────────────────────────────────── */
+/* These drift behind panels as atmospheric depth */
+
+.aurora-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  opacity: 0.08;
+  pointer-events: none;
+}
+
+.aurora-orb-mint {
+  background: var(--aurora-mint);
+  width: 300px;
+  height: 300px;
+}
+
+.aurora-orb-peach {
+  background: var(--aurora-peach);
+  width: 250px;
+  height: 250px;
+}
+
+.aurora-orb-lavender {
+  background: var(--aurora-lavender);
+  width: 280px;
+  height: 280px;
+}
+
+.aurora-orb-sky {
+  background: var(--aurora-sky);
+  width: 220px;
+  height: 220px;
+}
+
+.aurora-orb-rose {
+  background: var(--aurora-rose);
+  width: 260px;
+  height: 260px;
+}
+
+/* ── Pill Buttons (Primary CTA) ───────────────────────────────────────────── */
+
+.btn-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  height: 40px;
+  padding: 0 var(--space-5);
+  background: var(--action-primary);
+  color: var(--action-text);
+  font-size: var(--text-body);
+  font-weight: 500;
+  letter-spacing: 0;
+  border-radius: var(--radius-pill);
+  border: none;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-pill:hover {
+  background: var(--action-primary-hover);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-pill:active {
+  background: var(--action-primary-active);
+  transform: scale(0.98);
+}
+
+.btn-pill:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Outline pill */
+.btn-pill-outline {
+  background: transparent;
+  color: var(--text-primary);
+  border: 1px solid var(--hairline-strong);
+}
+
+.btn-pill-outline:hover {
+  background: rgba(255,255,255,0.04);
+  border-color: var(--hairline-active);
+}
+
+/* Ghost pill */
+.btn-pill-ghost {
+  background: transparent;
+  color: var(--text-secondary);
+  border: none;
+}
+
+.btn-pill-ghost:hover {
+  background: var(--canvas-hover);
+  color: var(--text-primary);
+}
+
+/* ── Cards ─────────────────────────────────────────────────────────────────── */
+
+.card {
+  background: var(--canvas-elevated);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
+  transition: all var(--transition-normal);
+}
+
+.card:hover {
+  border-color: var(--hairline-strong);
+  box-shadow: var(--shadow-sm);
+}
+
+.card-feature {
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
+}
+
+/* ── Hairlines ─────────────────────────────────────────────────────────────── */
+
+.hairline {
+  border-color: var(--hairline);
+}
+
+.hairline-strong {
+  border-color: var(--hairline-strong);
+}
+
+/* ── Glass Morphism ─────────────────────────────────────────────────────────── */
+
+.glass {
+  background: var(--canvas-glass);
+  backdrop-filter: blur(12px) saturate(1.4);
+  -webkit-backdrop-filter: blur(12px) saturate(1.4);
+  border: 1px solid var(--hairline);
+}
+
+.glass-strong {
+  background: var(--canvas-glass-strong);
+  backdrop-filter: blur(24px) saturate(1.6);
+  -webkit-backdrop-filter: blur(24px) saturate(1.6);
+  border: 1px solid var(--hairline-strong);
+}
+
+/* ── Glow Effects ───────────────────────────────────────────────────────────── */
+
+.glow-mint {
+  box-shadow: var(--aurora-mint-glow);
+}
+
+.glow-lavender {
+  box-shadow: var(--aurora-lavender-glow);
+}
+
+.glow-peach {
+  box-shadow: var(--aurora-peach-glow);
+}
+
+.glow-sky {
+  box-shadow: var(--aurora-sky-glow);
+}
+
+.glow-rose {
+  box-shadow: var(--aurora-rose-glow);
+}
+
+/* ── Custom Scrollbar ─────────────────────────────────────────────────────── */
 
 ::-webkit-scrollbar {
   width: 6px;
@@ -146,27 +439,26 @@ textarea,
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255,255,255,0.12);
-  border-radius: var(--radius-full);
+  background: var(--ink-600);
+  border-radius: var(--radius-pill);
   transition: background var(--transition-normal);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255,255,255,0.22);
+  background: var(--ink-500);
 }
 
 ::-webkit-scrollbar-thumb:active {
-  background: rgba(255,255,255,0.3);
+  background: var(--ink-500);
 }
 
 ::-webkit-scrollbar-corner {
   background: transparent;
 }
 
-/* Firefox */
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255,255,255,0.12) transparent;
+  scrollbar-color: var(--ink-600) transparent;
 }
 
 /* ── Animations ────────────────────────────────────────────────────────────── */
@@ -223,13 +515,13 @@ textarea,
 @keyframes pulse-glow {
   0%, 100% {
     box-shadow:
-      0 0 4px rgba(139,92,246,0.4),
-      0 0 12px rgba(139,92,246,0.15);
+      0 0 4px rgba(157,139,184,0.4),
+      0 0 12px rgba(157,139,184,0.15);
   }
   50% {
     box-shadow:
-      0 0 8px rgba(139,92,246,0.6),
-      0 0 24px rgba(139,92,246,0.3);
+      0 0 8px rgba(157,139,184,0.6),
+      0 0 24px rgba(157,139,184,0.3);
   }
 }
 
@@ -268,6 +560,21 @@ textarea,
   50%      { transform: translateY(-4px); }
 }
 
+@keyframes aurora-drift {
+  0%, 100% {
+    transform: translate(0, 0);
+  }
+  25% {
+    transform: translate(10px, -10px);
+  }
+  50% {
+    transform: translate(-5px, 5px);
+  }
+  75% {
+    transform: translate(-10px, -5px);
+  }
+}
+
 /* ── Animation Utility Classes ─────────────────────────────────────────────── */
 
 .animate-in {
@@ -298,55 +605,8 @@ textarea,
   animation: pulse-glow 2s ease-in-out infinite;
 }
 
-/* ── Glass Morphism ─────────────────────────────────────────────────────────── */
-
-.glass {
-  background: var(--bg-glass);
-  backdrop-filter: blur(12px) saturate(1.4);
-  -webkit-backdrop-filter: blur(12px) saturate(1.4);
-  border: 1px solid var(--border-subtle);
-}
-
-.glass-strong {
-  background: var(--bg-glass-strong);
-  backdrop-filter: blur(24px) saturate(1.6);
-  -webkit-backdrop-filter: blur(24px) saturate(1.6);
-  border: 1px solid var(--border-default);
-}
-
-/* ── Gradient Utilities ─────────────────────────────────────────────────────── */
-
-.gradient-text {
-  background: var(--accent-gradient);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.gradient-border {
-  border-image: var(--accent-gradient) 1;
-}
-
-.gradient-bg {
-  background: var(--accent-gradient);
-}
-
-/* ── Glow Effects ───────────────────────────────────────────────────────────── */
-
-.glow-violet {
-  box-shadow: var(--shadow-glow);
-}
-
-.glow-violet-strong {
-  box-shadow: var(--shadow-glow-strong);
-}
-
-.glow-success {
-  box-shadow: 0 0 20px rgba(16,185,129,0.15);
-}
-
-.glow-error {
-  box-shadow: 0 0 20px rgba(239,68,68,0.15);
+.aurora-drift {
+  animation: aurora-drift 20s ease-in-out infinite;
 }
 
 /* ── Skeleton / Loading ─────────────────────────────────────────────────────── */
@@ -354,16 +614,16 @@ textarea,
 .skeleton {
   background: linear-gradient(
     90deg,
-    var(--bg-elevated) 25%,
+    var(--canvas-elevated) 25%,
     rgba(255,255,255,0.06) 50%,
-    var(--bg-elevated) 75%
+    var(--canvas-elevated) 75%
   );
   background-size: 200% 100%;
   animation: shimmer 1.5s ease-in-out infinite;
   border-radius: var(--radius-md);
 }
 
-/* ── Highlight.js Overrides ─────────────────────────────────────────────────── */
+/* ── Syntax Highlighting Overrides — Aurora Theme ────────────────────────── */
 
 .hljs {
   background: transparent !important;
@@ -374,47 +634,49 @@ textarea,
 .hljs-keyword,
 .hljs-selector-tag,
 .hljs-literal {
-  color: #c4b5fd !important; /* violet-300 */
+  color: var(--aurora-lavender) !important;
 }
 
 .hljs-title,
-.hljs-title.function_ {
-  color: #93c5fd !important; /* blue-300 */
+.hljs-title.function_,
+.hljs-function {
+  color: var(--aurora-sky) !important;
 }
 
 .hljs-string,
 .hljs-regexp {
-  color: #86efac !important; /* green-300 */
+  color: var(--aurora-mint) !important;
 }
 
 .hljs-number,
 .hljs-built_in {
-  color: #fca5a5 !important; /* red-300 */
+  color: var(--aurora-peach) !important;
 }
 
 .hljs-comment,
-.hljs-doctag {
-  color: var(--text-muted) !important;
+.hljs-doctag,
+.hljs-meta {
+  color: var(--text-tertiary) !important;
   font-style: italic;
 }
 
 .hljs-variable,
 .hljs-template-variable {
-  color: #fbbf24 !important; /* amber-400 */
+  color: var(--aurora-rose) !important;
 }
 
 .hljs-attr,
 .hljs-attribute {
-  color: #f9a8d4 !important; /* pink-300 */
+  color: var(--aurora-lavender) !important;
 }
 
 .hljs-type,
 .hljs-class .hljs-title {
-  color: #67e8f9 !important; /* cyan-300 */
+  color: var(--aurora-sky) !important;
 }
 
-.hljs-meta {
-  color: var(--text-muted) !important;
+.hljs-operator {
+  color: var(--text-primary) !important;
 }
 
 .hljs-addition {
@@ -443,16 +705,16 @@ textarea,
 .prose-chat code {
   font-family: var(--font-mono);
   font-size: 0.875em;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-subtle);
+  background: var(--canvas-elevated);
+  border: 1px solid var(--hairline);
   border-radius: var(--radius-sm);
   padding: 0.15em 0.4em;
-  color: #c4b5fd;
+  color: var(--aurora-lavender);
 }
 
 .prose-chat pre {
-  background: var(--bg-surface) !important;
-  border: 1px solid var(--border-subtle);
+  background: var(--canvas-surface) !important;
+  border: 1px solid var(--hairline);
   border-radius: var(--radius-md);
   padding: var(--space-4);
   margin: var(--space-3) 0;
@@ -468,18 +730,18 @@ textarea,
 }
 
 .prose-chat a {
-  color: var(--accent-primary);
+  color: var(--aurora-sky);
   text-decoration: none;
   border-bottom: 1px solid transparent;
   transition: border-color var(--transition-normal);
 }
 
 .prose-chat a:hover {
-  border-bottom-color: var(--accent-primary);
+  border-bottom-color: var(--aurora-sky);
 }
 
 .prose-chat blockquote {
-  border-left: 3px solid var(--border-active);
+  border-left: 3px solid var(--hairline-strong);
   padding-left: var(--space-4);
   color: var(--text-secondary);
   font-style: italic;
@@ -497,8 +759,10 @@ textarea,
 
 .prose-chat h1,
 .prose-chat h2,
-.prose-chat h3,
-.prose-chat h4 {
+.text-heading-h1,
+.text-heading-h2,
+.text-heading-h3,
+.text-heading-h4 {
   color: var(--text-primary);
   font-weight: 600;
   margin-top: 1.25em;
@@ -506,13 +770,14 @@ textarea,
   line-height: 1.3;
 }
 
-.prose-chat h1 { font-size: 1.5em; }
-.prose-chat h2 { font-size: 1.25em; }
-.prose-chat h3 { font-size: 1.1em; }
+.prose-chat h1, .text-heading-h1 { font-size: 1.5em; }
+.prose-chat h2, .text-heading-h2 { font-size: 1.25em; }
+.prose-chat h3, .text-heading-h3 { font-size: 1.1em; }
+.prose-chat h4, .text-heading-h4 { font-size: 1em; }
 
 .prose-chat hr {
   border: none;
-  border-top: 1px solid var(--border-default);
+  border-top: 1px solid var(--hairline-strong);
   margin: var(--space-4) 0;
 }
 
@@ -525,13 +790,13 @@ textarea,
 
 .prose-chat th,
 .prose-chat td {
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--hairline);
   padding: var(--space-2) var(--space-3);
   text-align: left;
 }
 
 .prose-chat th {
-  background: var(--bg-elevated);
+  background: var(--canvas-elevated);
   font-weight: 600;
   color: var(--text-secondary);
 }
@@ -553,13 +818,13 @@ textarea,
   bottom: calc(100% + 6px);
   left: 50%;
   transform: translateX(-50%) scale(0.96);
-  background: var(--bg-elevated);
+  background: var(--canvas-elevated);
   color: var(--text-secondary);
   font-size: 12px;
   font-weight: 500;
   padding: 4px 8px;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--border-default);
+  border: 1px solid var(--hairline-strong);
   white-space: nowrap;
   pointer-events: none;
   opacity: 0;
@@ -577,7 +842,7 @@ textarea,
 .resize-handle {
   position: relative;
   width: 1px;
-  background: var(--border-subtle);
+  background: var(--hairline);
   transition: background var(--transition-normal);
   cursor: col-resize;
 }
@@ -593,8 +858,8 @@ textarea,
 
 .resize-handle:hover,
 .resize-handle[data-resizing="true"] {
-  background: var(--accent-primary);
-  box-shadow: 0 0 8px rgba(139,92,246,0.3);
+  background: var(--aurora-lavender);
+  box-shadow: 0 0 8px rgba(157,139,184,0.3);
 }
 
 /* ── Interactive States ──────────────────────────────────────────────────────── */
@@ -609,11 +874,11 @@ textarea,
 }
 
 .interactive:hover {
-  background: var(--bg-hover);
+  background: var(--canvas-hover);
 }
 
 .interactive:active {
-  background: var(--bg-active);
+  background: var(--canvas-active);
   transform: scale(0.98);
 }
 

@@ -18,13 +18,13 @@ function Toggle({ checked, onChange, label }: ToggleProps) {
       onClick={() => onChange(!checked)}
       className={`
         relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full
-        transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-violet-500
-        ${checked ? "bg-violet-500" : "bg-zinc-700"}
+        transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-[#9d8bb8]
+        ${checked ? "bg-[#5fb8a3]" : "bg-[#44403c]"}
       `}
     >
       <span
         className={`
-          pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-sm
+          pointer-events-none inline-block h-5 w-5 rounded-full bg-[#fafaf9] shadow-sm
           transition-transform duration-150
           ${checked ? "translate-x-5" : "translate-x-0"}
         `}
@@ -47,12 +47,12 @@ function SettingRow({ icon, title, description, children }: SettingRowProps) {
   return (
     <div className="flex items-start justify-between gap-4 rounded-lg px-1 py-3">
       <div className="flex items-start gap-3 min-w-0">
-        <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-zinc-800 text-zinc-400">
+        <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#1c1917] text-[#78716c]">
           {icon}
         </div>
         <div className="min-w-0">
-          <p className="text-sm font-medium text-zinc-50">{title}</p>
-          <p className="text-xs text-zinc-500 mt-0.5">{description}</p>
+          <p className="text-sm font-medium text-[#fafaf9]">{title}</p>
+          <p className="text-xs text-[#57534e] mt-0.5">{description}</p>
         </div>
       </div>
       <div className="shrink-0 pt-1">{children}</div>
@@ -62,6 +62,11 @@ function SettingRow({ icon, title, description, children }: SettingRowProps) {
 
 // ── General Tab ──────────────────────────────────────────────────────────────
 
+/**
+ * General settings tab with ElevenLabs-inspired warm dark design:
+ * - Auroras: mint (#5fb8a3) for toggles, lavender (#9d8bb8) for focus
+ * - Warm ink backgrounds for controls
+ */
 export default function GeneralTab() {
   const settings = useUIStore((s) => s.settings);
   const updateSettings = useUIStore((s) => s.updateSettings);
@@ -79,12 +84,12 @@ export default function GeneralTab() {
         title="Theme"
         description="Interface color scheme. Light mode is not yet available."
       >
-        <div className="flex items-center gap-1 rounded-lg bg-zinc-800 p-0.5">
+        <div className="flex items-center gap-1 rounded-full bg-[#1c1917] p-0.5">
           <button
-            className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors duration-150 ${
+            className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors duration-150 ${
               settings.theme === "dark"
-                ? "bg-violet-500/20 text-violet-400"
-                : "text-zinc-500 hover:text-zinc-400"
+                ? "bg-[#292524] text-[#fafaf9]"
+                : "text-[#57534e] hover:text-[#78716c]"
             }`}
             onClick={() => updateSettings({ theme: "dark" })}
           >
@@ -92,10 +97,10 @@ export default function GeneralTab() {
             Dark
           </button>
           <button
-            className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors duration-150 ${
+            className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors duration-150 ${
               settings.theme === "light"
-                ? "bg-violet-500/20 text-violet-400"
-                : "text-zinc-500 hover:text-zinc-400"
+                ? "bg-[#292524] text-[#fafaf9]"
+                : "text-[#57534e] hover:text-[#78716c]"
             }`}
             onClick={() => updateSettings({ theme: "light" })}
             title="Not yet available"
@@ -120,9 +125,11 @@ export default function GeneralTab() {
             step={1}
             value={settings.fontSize}
             onChange={(e) => handleFontSizeChange(Number(e.target.value))}
-            className="h-1.5 w-24 cursor-pointer appearance-none rounded-full bg-zinc-700 accent-violet-500"
+            className="h-1.5 w-24 cursor-pointer appearance-none rounded-full bg-[#44403c]
+              [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:w-3.5 
+              [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#9d8bb8]"
           />
-          <span className="w-8 text-right text-xs font-mono text-zinc-400 tabular-nums">
+          <span className="w-8 text-right text-xs font-mono text-[#78716c] tabular-nums">
             {settings.fontSize}px
           </span>
         </div>

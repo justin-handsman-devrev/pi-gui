@@ -7,10 +7,12 @@ import type { DiffLine } from "@/lib/diff-parser";
  * Full standalone unified-diff renderer.
  *
  * Shows a proper two-column diff with:
- *  - Red background + "- " prefix for deletions (with old line numbers)
- *  - Green background + "+ " prefix for additions (with new line numbers)
- *  - Muted context lines (with both line numbers)
+ *  - Aurora-mint background for additions
+ *  - Aurora-rose background for deletions
+ *  - Muted context lines with warm ink colors
  *  - Collapsed equal sections to keep the view focused
+ *
+ * ElevenLabs-inspired design: warm dark ink colors, aurora-tinted diff highlights.
  */
 interface DiffRendererProps {
   diffs: DiffInfo[];
@@ -97,25 +99,25 @@ export default function DiffRenderer({ diffs, filePath }: DiffRendererProps) {
     return max;
   }, [collapsed]);
 
-  const gutterWidth = Math.max(3, String(maxLineNo).length) * 8 + 12;
+  const gutterWidth = Math.max(3, String(maxLineNo).length) * 8 + 16;
 
   if (allLines.length === 0) {
     return (
-      <div className="flex h-full items-center justify-center bg-[var(--bg-primary)] text-[var(--text-muted)]">
+      <div className="flex h-full items-center justify-center bg-[#0c0a09] text-[#78716c]">
         <p className="text-sm">No diff available</p>
       </div>
     );
   }
 
   return (
-    <div className="flex h-full flex-col overflow-hidden bg-[var(--bg-primary)]">
+    <div className="flex h-full flex-col overflow-hidden bg-[#0c0a09]">
       {/* File path header */}
-      <div className="flex h-8 shrink-0 items-center gap-2 border-b border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3">
-        <FileCode2 size={13} className="text-[var(--text-faint)]" />
-        <span className="truncate text-xs text-[var(--text-secondary)] font-mono">
+      <div className="flex h-9 shrink-0 items-center gap-2 border-b border-[rgba(255,255,255,0.06)] bg-[#131210] px-4">
+        <FileCode2 size={13} className="text-[#57534e]" />
+        <span className="truncate text-xs text-[#a8a29e] font-mono">
           {filePath}
         </span>
-        <span className="ml-auto text-[10px] text-[var(--text-faint)]">
+        <span className="ml-auto text-[10px] text-[#57534e]">
           {countChanges(allLines)} changes
         </span>
       </div>
@@ -123,8 +125,8 @@ export default function DiffRenderer({ diffs, filePath }: DiffRendererProps) {
       {/* Diff content */}
       <div ref={scrollRef} className="flex-1 overflow-auto">
         <pre
-          className="m-0 min-w-full font-mono text-[13px] leading-[20px]"
-          style={{ fontFamily: "var(--font-mono)" }}
+          className="m-0 min-w-full font-mono text-[13px] leading-[22px]"
+          style={{ fontFamily: "var(--font-mono), 'JetBrains Mono', ui-monospace, monospace" }}
         >
           {collapsed.map((entry, i) => {
             if (entry.kind === "skipped") {
@@ -163,23 +165,29 @@ function DiffLineRow({
 
   let bgClass = "";
   let prefix = " ";
-  let textClass = "text-[var(--text-secondary)]";
+  let textClass = "text-[#a8a29e]";
+  let numClass = "text-[#57534e]";
 
   switch (type) {
     case "added":
-      bgClass = "bg-[rgba(16,185,129,0.10)]";
+      // Aurora-mint for additions
+      bgClass = "bg-[#5fb8a3]/10";
       prefix = "+";
-      textClass = "text-emerald-400";
+      textClass = "text-[#5fb8a3]";
+      numClass = "text-[#5fb8a3]/50";
       break;
     case "removed":
-      bgClass = "bg-[rgba(239,68,68,0.10)]";
+      // Aurora-rose for deletions
+      bgClass = "bg-[#c494a4]/10";
       prefix = "-";
-      textClass = "text-red-400";
+      textClass = "text-[#c494a4]";
+      numClass = "text-[#c494a4]/50";
       break;
     case "context":
       bgClass = "";
       prefix = " ";
-      textClass = "text-[var(--text-muted)]";
+      textClass = "text-[#78716c]";
+      numClass = "text-[#57534e]";
       break;
   }
 
@@ -193,24 +201,24 @@ function DiffLineRow({
     .replace(/>/g, "&gt;");
 
   return (
-    <div className={`flex h-5 items-start ${bgClass}`}>
+    <div className={`flex h-[22px] items-start ${bgClass}`}>
       {/* Old line number */}
       <div
-        className="shrink-0 select-none text-right text-[11px] leading-[20px] text-[var(--text-faint)]"
+        className={`shrink-0 select-none text-right text-[11px] leading-[22px] ${numClass}`}
         style={{ width: gutterWidth }}
       >
         {oldStr || "\u00A0"}
       </div>
       {/* New line number */}
       <div
-        className="shrink-0 select-none border-r border-[var(--border-subtle)] text-right text-[11px] leading-[20px] text-[var(--text-faint)]"
+        className={`shrink-0 select-none border-r border-[rgba(255,255,255,0.06)] text-right text-[11px] leading-[22px] ${numClass}`}
         style={{ width: gutterWidth }}
       >
         {newStr || "\u00A0"}
       </div>
       {/* Prefix + content */}
       <div className={`flex min-w-0 flex-1 whitespace-pre ${textClass}`}>
-        <span className="shrink-0 pl-2 pr-1 font-bold opacity-60">{prefix}</span>
+        <span className="shrink-0 pl-3 pr-1 font-bold opacity-60">{prefix}</span>
         <span
           className="flex-1"
           dangerouslySetInnerHTML={{ __html: safeContent || "&nbsp;" }}
@@ -222,21 +230,21 @@ function DiffLineRow({
 
 function SkippedLines({
   entry,
-  gutterWidth,
 }: {
   entry: CollapsedLine & { kind: "skipped" };
   gutterWidth: number;
 }) {
   return (
-    <div className="flex h-5 items-center bg-[var(--bg-elevated)]">
-      <div style={{ width: gutterWidth * 2 + 1 }} className="shrink-0" />
-      <div className="flex items-center gap-2 pl-3 text-[11px] text-[var(--text-faint)]">
-        <span className="h-px flex-1 max-w-[40px] bg-[var(--border-subtle)]" />
+    <div className="flex h-[22px] items-center bg-[#1c1917]/50">
+      <div className="flex-1" />
+      <div className="flex items-center gap-2 px-4 text-[11px] text-[#57534e]">
+        <span className="h-px w-6 bg-[#44403c]" />
         <span>
-          ⋯ {entry.count} lines hidden (L{entry.oldStart}→L{entry.newStart})
+          ⋯ {entry.count} lines hidden
         </span>
-        <span className="h-px flex-1 max-w-[40px] bg-[var(--border-subtle)]" />
+        <span className="h-px w-6 bg-[#44403c]" />
       </div>
+      <div className="flex-1" />
     </div>
   );
 }

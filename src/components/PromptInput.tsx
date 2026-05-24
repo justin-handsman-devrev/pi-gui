@@ -84,100 +84,103 @@ export default function PromptInput() {
   const canSend = text.trim().length > 0;
 
   return (
-    <div className="shrink-0 border-t border-zinc-800 bg-zinc-950 px-4 pb-3 pt-2">
+    <div className="shrink-0 px-4 pb-4 pt-3">
       <div className="mx-auto max-w-3xl">
-        <div className="flex items-end gap-2 rounded-xl border border-zinc-700 bg-zinc-800 px-3 py-2 transition-colors duration-150 focus-within:border-violet-500">
-          {/* Left: model badge */}
-          <div className="shrink-0 pb-1">
-            <span className="inline-flex items-center rounded-md bg-zinc-700/60 px-2 py-0.5 text-[11px] font-medium text-zinc-400">
-              {modelLabel}
-            </span>
-          </div>
+        {/* Pill-shaped input container */}
+        <div className="relative rounded-full border border-[rgba(255,255,255,0.06)] bg-[#131210] transition-all duration-150 focus-within:border-[#9d8bb8] focus-within:ring-2 focus-within:ring-[#9d8bb8]/20">
+          <div className="flex items-end gap-3 px-5 py-3">
+            {/* Left: model badge */}
+            <div className="shrink-0 pb-0.5">
+              <span className="inline-flex items-center rounded-full bg-[#1c1917] px-2 py-1 text-[11px] text-[#78716c]">
+                {modelLabel}
+              </span>
+            </div>
 
-          {/* Textarea */}
-          <textarea
-            ref={textareaRef}
-            value={text}
-            onChange={(e) => {
-              setText(e.target.value);
-              handleInput();
-            }}
-            onKeyDown={handleKeyDown}
-            placeholder={
-              isStreaming ? "Steer the agent…" : "Send a message…"
-            }
-            rows={1}
-            className="flex-1 resize-none bg-transparent text-sm leading-6 text-zinc-50 outline-none placeholder:text-zinc-500"
-            style={{ maxHeight: `${LINE_HEIGHT * MAX_ROWS}px` }}
-          />
+            {/* Textarea */}
+            <textarea
+              ref={textareaRef}
+              value={text}
+              onChange={(e) => {
+                setText(e.target.value);
+                handleInput();
+              }}
+              onKeyDown={handleKeyDown}
+              placeholder={
+                isStreaming ? "Steer the agent…" : "Send a message…"
+              }
+              rows={1}
+              className="flex-1 resize-none bg-transparent text-[15px] leading-6 text-[#fafaf9] outline-none placeholder:text-[#78716c]"
+              style={{ maxHeight: `${LINE_HEIGHT * MAX_ROWS}px` }}
+            />
 
-          {/* Right: action buttons */}
-          <div className="flex shrink-0 items-center gap-1 pb-0.5">
-            {/* Attach button (disabled placeholder) */}
-            <button
-              type="button"
-              disabled
-              className="rounded-lg p-1.5 text-zinc-600 transition-colors duration-150 hover:bg-zinc-700 hover:text-zinc-400 disabled:opacity-40 disabled:cursor-not-allowed"
-              title="Attach file (coming soon)"
-            >
-              <Paperclip size={16} />
-            </button>
+            {/* Right: action buttons */}
+            <div className="flex shrink-0 items-center gap-1.5 pb-0.5">
+              {/* Attach button (disabled placeholder) */}
+              <button
+                type="button"
+                disabled
+                className="rounded-full p-2 text-[#57534e] transition-colors duration-150 hover:bg-[#1c1917] hover:text-[#78716c] disabled:opacity-40 disabled:cursor-not-allowed"
+                title="Attach file (coming soon)"
+              >
+                <Paperclip size={16} />
+              </button>
 
-            {/* Send / Steer / Abort */}
-            <AnimatePresence mode="wait">
-              {isStreaming ? (
-                <motion.div
-                  key="streaming-buttons"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="flex items-center gap-1"
-                >
-                  <button
+              {/* Send / Steer / Abort */}
+              <AnimatePresence mode="wait">
+                {isStreaming ? (
+                  <motion.div
+                    key="streaming-buttons"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="flex items-center gap-1"
+                  >
+                    <button
+                      type="button"
+                      onClick={handleSend}
+                      disabled={!canSend}
+                      className="flex items-center gap-1.5 rounded-full bg-[#2a2522] px-3 py-1.5 text-[13px] text-[#d4a88c] transition-colors duration-150 hover:bg-[#3a3532] disabled:opacity-40 disabled:cursor-not-allowed"
+                      title="Steer agent"
+                    >
+                      <CornerDownLeft size={12} />
+                      Steer
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleAbort}
+                      className="flex items-center justify-center rounded-full bg-[#1c1917] p-2 text-[#78716c] transition-colors duration-150 hover:bg-[#2a2522] hover:text-[#a8a29e]"
+                      title="Abort (Esc)"
+                    >
+                      <Square size={12} />
+                    </button>
+                  </motion.div>
+                ) : (
+                  <motion.button
+                    key="send-button"
                     type="button"
                     onClick={handleSend}
                     disabled={!canSend}
-                    className="flex items-center gap-1.5 rounded-lg bg-amber-500/15 px-2.5 py-1 text-xs font-medium text-amber-400 transition-colors duration-150 hover:bg-amber-500/25 disabled:opacity-40 disabled:cursor-not-allowed"
-                    title="Steer agent"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className={`flex items-center justify-center rounded-full p-2 transition-all duration-150 ${
+                      canSend
+                        ? "bg-[#44403c] text-[#fafaf9] hover:bg-[#57534e]"
+                        : "bg-[#1c1917] text-[#57534e]"
+                    } disabled:cursor-not-allowed`}
+                    title="Send (Enter)"
                   >
-                    <CornerDownLeft size={12} />
-                    Steer
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleAbort}
-                    className="flex items-center justify-center rounded-lg bg-red-500/15 p-1.5 text-red-400 transition-colors duration-150 hover:bg-red-500/25"
-                    title="Abort (Esc)"
-                  >
-                    <Square size={12} />
-                  </button>
-                </motion.div>
-              ) : (
-                <motion.button
-                  key="send-button"
-                  type="button"
-                  onClick={handleSend}
-                  disabled={!canSend}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className={`flex items-center justify-center rounded-lg p-1.5 transition-all duration-150 ${
-                    canSend
-                      ? "bg-gradient-to-r from-violet-500 to-indigo-500 text-white hover:brightness-110"
-                      : "bg-zinc-700 text-zinc-500"
-                  } disabled:cursor-not-allowed`}
-                  title="Send (Enter)"
-                >
-                  <Send size={14} />
-                </motion.button>
-              )}
-            </AnimatePresence>
+                    <Send size={14} />
+                  </motion.button>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
         </div>
 
         {/* Helper text */}
-        <div className="mt-1.5 flex items-center justify-between px-1">
-          <p className="text-[11px] text-zinc-600">
+        <div className="mt-2 flex items-center justify-center px-1">
+          <p className="text-[11px] text-[#57534e]">
             {isStreaming
               ? "Type to steer · Esc to abort"
               : "Enter to send · Shift+Enter for newline"}

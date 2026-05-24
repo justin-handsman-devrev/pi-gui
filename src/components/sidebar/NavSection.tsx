@@ -55,26 +55,26 @@ export default function NavSection({ items = defaultItems }: NavSectionProps) {
             key={item.id}
             onClick={() => setSidebarView(item.id)}
             className={`
-              group flex items-center gap-2.5 rounded-md px-2.5 py-1.5
-              text-[13px] font-medium
+              group flex items-center gap-2.5 rounded-lg px-3 py-2
+              text-[13px] leading-[1.4] font-medium
               transition-all duration-150 ease-out
               ${
                 isActive
-                  ? "bg-violet-500/10 text-violet-400 border-l-2 border-violet-500 pl-[calc(0.625rem-2px)]"
-                  : "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 border-l-2 border-transparent pl-[calc(0.625rem-2px)]"
+                  ? "bg-[#44403c]/50 text-[#fafaf9] border-l-2 border-[#9d8bb8] pl-[calc(0.75rem-2px)]"
+                  : "text-[#a8a29e] hover:bg-[#44403c]/30 hover:text-[#fafaf9] border-l-2 border-transparent pl-[calc(0.75rem-2px)]"
               }
             `}
           >
             <span
               className={`shrink-0 transition-colors duration-150 ${
-                isActive ? "text-violet-400" : "text-zinc-500 group-hover:text-zinc-400"
+                isActive ? "text-[#9d8bb8]" : "text-[#78716c] group-hover:text-[#a8a29e]"
               }`}
             >
               {item.icon}
             </span>
             <span className="flex-1 truncate text-left">{item.label}</span>
             {item.badge !== undefined && item.badge > 0 && (
-              <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-zinc-700 px-1.5 text-[10px] font-semibold tabular-nums text-zinc-300">
+              <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-[#44403c] px-1.5 text-[10px] font-semibold tabular-nums text-[#a8a29e]">
                 {item.badge > 99 ? "99+" : item.badge}
               </span>
             )}

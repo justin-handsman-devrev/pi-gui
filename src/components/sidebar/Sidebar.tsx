@@ -39,7 +39,7 @@ export default function Sidebar() {
       {!sidebarOpen && (
         <button
           onClick={() => setSidebarOpen(true)}
-          className="absolute left-3 top-3 z-50 flex h-7 w-7 items-center justify-center rounded-md text-zinc-500 transition-all duration-150 ease-out hover:bg-zinc-800 hover:text-zinc-300"
+          className="absolute left-3 top-3 z-50 flex h-7 w-7 items-center justify-center rounded-md text-[#78716c] transition-all duration-150 ease-out hover:bg-[#44403c]/30 hover:text-[#a8a29e]"
           title="Open sidebar"
         >
           <PanelLeft size={16} />
@@ -50,28 +50,28 @@ export default function Sidebar() {
       <AnimatePresence initial={false}>
         {sidebarOpen && (
           <motion.aside
-            initial={{ width: 0, opacity: 0 }}
-            animate={{ width: 260, opacity: 1 }}
-            exit={{ width: 0, opacity: 0 }}
-            transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] as [number, number, number, number] }}
-            className="relative flex h-full shrink-0 flex-col overflow-hidden border-r border-zinc-800 bg-zinc-900"
+            initial={{ x: -260, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: -260, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            className="relative flex h-full w-[260px] shrink-0 flex-col overflow-hidden border-r border-white/[0.06] bg-[#1c1917]"
           >
-            {/* Fixed-width inner content prevents layout shift during animation */}
-            <div className="flex h-full w-[260px] flex-col overflow-hidden">
+            {/* Fixed-width inner content */}
+            <div className="flex h-full w-full flex-col overflow-hidden">
               {/* ── Header ─────────────────────────────────────────── */}
-              <div className="flex shrink-0 items-center gap-2 border-b border-zinc-800 px-3 py-3">
+              <div className="flex shrink-0 items-center gap-2 border-b border-white/[0.06] px-3 py-3">
                 {/* Logo */}
-                <div className="flex h-6 w-6 items-center justify-center rounded-md bg-gradient-to-br from-violet-500 to-indigo-500 text-[13px] font-bold text-white">
+                <div className="flex h-6 w-6 items-center justify-center rounded-md bg-[#292524] text-[13px] font-medium text-white">
                   π
                 </div>
-                <span className="flex-1 text-[13px] font-semibold text-zinc-100">
+                <span className="flex-1 text-[15px] font-medium tracking-[0.15px] text-[#fafaf9]">
                   Pi GUI
                 </span>
 
                 {/* Collapse button */}
                 <button
                   onClick={() => setSidebarOpen(false)}
-                  className="flex h-6 w-6 items-center justify-center rounded-md text-zinc-500 transition-all duration-150 ease-out hover:bg-zinc-800 hover:text-zinc-300"
+                  className="flex h-6 w-6 items-center justify-center rounded-md text-[#78716c] transition-all duration-150 ease-out hover:bg-[#44403c]/30 hover:text-[#a8a29e]"
                   title="Collapse sidebar"
                 >
                   <PanelLeftClose size={14} />
@@ -84,19 +84,18 @@ export default function Sidebar() {
                   onClick={handleNewChat}
                   disabled={isStreaming}
                   className="
-                    flex w-full items-center justify-center gap-1.5 rounded-lg
-                    bg-gradient-to-r from-violet-600 to-indigo-600
-                    px-3 py-2 text-[13px] font-medium text-white
-                    shadow-sm shadow-violet-500/20
+                    flex w-full items-center justify-center gap-1.5 rounded-full
+                    h-[40px] px-5
+                    bg-[#292524] text-white
+                    text-[14px] font-medium
                     transition-all duration-150 ease-out
-                    hover:from-violet-500 hover:to-indigo-500
-                    hover:shadow-md hover:shadow-violet-500/30
+                    hover:bg-[#44403c]
                     active:scale-[0.98]
                     disabled:opacity-50 disabled:cursor-not-allowed
                     disabled:active:scale-100
                   "
                 >
-                  <Plus size={14} strokeWidth={2.5} />
+                  <Plus size={14} strokeWidth={2} />
                   New Chat
                 </button>
               </div>
@@ -107,14 +106,14 @@ export default function Sidebar() {
               </div>
 
               {/* ── Divider ────────────────────────────────────────── */}
-              <div className="mx-3 shrink-0 border-t border-zinc-800" />
+              <div className="mx-3 shrink-0 border-t border-white/[0.06]" />
 
               {/* ── Recent Section (scrollable) ─────────────────────── */}
               <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
                 {/* Section header */}
                 <button
                   onClick={() => setRecentExpanded((v) => !v)}
-                  className="group flex shrink-0 items-center gap-1.5 px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-500 transition-colors duration-150 hover:text-zinc-400"
+                  className="group flex shrink-0 items-center gap-1.5 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.88px] text-[#78716c] transition-colors duration-150 hover:text-[#a8a29e]"
                 >
                   <motion.span
                     animate={{ rotate: recentExpanded ? 0 : -90 }}
@@ -183,8 +182,8 @@ function SettingsInline() {
       />
 
       <div className="flex items-center justify-between px-1">
-        <span className="text-[12px] text-zinc-400">Font size</span>
-        <span className="font-mono text-[12px] tabular-nums text-zinc-300">
+        <span className="text-[12px] text-[#a8a29e]">Font size</span>
+        <span className="font-mono text-[12px] tabular-nums text-[#fafaf9]">
           {settings.fontSize}px
         </span>
       </div>
@@ -196,7 +195,7 @@ function SettingsInline() {
         onChange={(e) =>
           updateSettings({ fontSize: Number(e.target.value) })
         }
-        className="w-full accent-violet-500"
+        className="w-full accent-[#9d8bb8]"
       />
     </div>
   );
@@ -212,20 +211,20 @@ function SettingToggle({ label, checked, onChange }: SettingToggleProps) {
   return (
     <button
       onClick={() => onChange(!checked)}
-      className="flex items-center justify-between rounded-md px-1 py-1 transition-colors duration-150 hover:bg-zinc-800"
+      className="flex items-center justify-between rounded-md px-1 py-1 transition-colors duration-150 hover:bg-[#44403c]/30"
     >
-      <span className="text-[12px] text-zinc-400">{label}</span>
+      <span className="text-[12px] text-[#a8a29e]">{label}</span>
       <span
         className={`
           flex h-4 w-7 items-center rounded-full p-0.5
-          transition-colors duration-150
-          ${checked ? "bg-violet-500" : "bg-zinc-700"}
+          transition-colors duration-150 ease-out
+          ${checked ? "bg-[#5fb8a3]" : "bg-[#44403c]"}
         `}
       >
         <motion.span
           animate={{ x: checked ? 12 : 0 }}
           transition={{ duration: 0.15, ease: "easeOut" }}
-          className="h-3 w-3 rounded-full bg-white"
+          className="h-3 w-3 rounded-full bg-white shadow-sm"
         />
       </span>
     </button>
@@ -237,9 +236,9 @@ function SettingToggle({ label, checked, onChange }: SettingToggleProps) {
 function ScheduledPlaceholder() {
   return (
     <div className="px-4 py-6 text-center">
-      <Clock size={24} className="mx-auto mb-2 text-zinc-600" />
-      <p className="text-xs text-zinc-500">No scheduled tasks</p>
-      <p className="mt-0.5 text-[11px] text-zinc-600">
+      <Clock size={24} className="mx-auto mb-2 text-[#57534e]" />
+      <p className="text-xs text-[#78716c]">No scheduled tasks</p>
+      <p className="mt-0.5 text-[11px] text-[#57534e]">
         Automations will appear here
       </p>
     </div>

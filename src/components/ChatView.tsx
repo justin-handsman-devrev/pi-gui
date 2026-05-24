@@ -32,43 +32,41 @@ export default function ChatView() {
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: "easeOut" }}
-          className="text-center"
+          transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
+          className="text-center relative"
         >
-          {/* Logo with glow */}
-          <div className="relative mx-auto mb-4 flex h-20 w-20 items-center justify-center">
-            <div className="absolute inset-0 rounded-full bg-violet-500/10 blur-xl" />
-            <span className="gradient-text relative text-5xl font-bold">
+          {/* Aurora glow behind π */}
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+            <div className="aurora-orb-lavender w-32 h-32 opacity-40" />
+          </div>
+
+          {/* π Logo */}
+          <div className="relative mx-auto mb-6 flex h-20 w-20 items-center justify-center">
+            <span className="text-[48px] tracking-[-1.44px] text-[#fafaf9] font-normal">
               π
             </span>
           </div>
 
-          <p className="text-base font-medium text-zinc-400">
+          <h2 className="text-[20px] leading-[1.35] text-[#fafaf9] font-medium">
             Start a conversation
-          </p>
-          <p className="mt-1 text-sm text-zinc-600">
+          </h2>
+          <p className="mt-2 text-[13px] text-[#78716c]">
             Ask Pi to code, debug, refactor, or anything else.
           </p>
 
           {/* Keyboard shortcuts hint */}
-          <div className="mt-6 flex items-center justify-center gap-4 text-xs text-zinc-600">
-            <div className="flex items-center gap-1.5">
-              <kbd className="rounded border border-zinc-700 bg-zinc-800 px-1.5 py-0.5 font-mono text-[10px] text-zinc-400">
-                Enter
-              </kbd>
-              <span>Send</span>
+          <div className="mt-8 flex items-center justify-center gap-3 text-[13px]">
+            <div className="flex items-center gap-1.5 rounded-full bg-[#1c1917] px-3 py-1.5">
+              <kbd className="text-[11px] text-[#78716c] font-mono">Enter</kbd>
+              <span className="text-[#a8a29e]">Send</span>
             </div>
-            <div className="flex items-center gap-1.5">
-              <kbd className="rounded border border-zinc-700 bg-zinc-800 px-1.5 py-0.5 font-mono text-[10px] text-zinc-400">
-                Shift+Enter
-              </kbd>
-              <span>Newline</span>
+            <div className="flex items-center gap-1.5 rounded-full bg-[#1c1917] px-3 py-1.5">
+              <kbd className="text-[11px] text-[#78716c] font-mono">Shift+Enter</kbd>
+              <span className="text-[#a8a29e]">Newline</span>
             </div>
-            <div className="flex items-center gap-1.5">
-              <kbd className="rounded border border-zinc-700 bg-zinc-800 px-1.5 py-0.5 font-mono text-[10px] text-zinc-400">
-                Esc
-              </kbd>
-              <span>Abort</span>
+            <div className="flex items-center gap-1.5 rounded-full bg-[#1c1917] px-3 py-1.5">
+              <kbd className="text-[11px] text-[#78716c] font-mono">Esc</kbd>
+              <span className="text-[#a8a29e]">Abort</span>
             </div>
           </div>
         </motion.div>

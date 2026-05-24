@@ -1,58 +1,124 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  ChevronDown,
+  ChevronRight,
+  Loader2,
+  Check,
+  X,
+  Terminal,
+  FileEdit,
+  FilePenLine,
+  BookOpen,
+  Search,
+  FolderSearch,
+  List,
+  Wrench,
+  FileCode,
+} from "lucide-react";
 import type { ToolCallInfo } from "@/stores/agentStore";
 import { useUIStore } from "@/stores/uiStore";
+import { useCanvasStore } from "@/canvas/canvasStore";
+
+// ── Tool config ──────────────────────────────────────────────────────────
+
+interface ToolConfig {
+  icon: ReactNode;
+  label: string;
+  color: string; // tailwind text color
+  bg: string; // tailwind bg color
+}
+
+const TOOL_CONFIGS: Record<string, ToolConfig> = {
+  bash: {
+    icon: <Terminal size={12} />,
+    label: "Bash",
+    color: "text-amber-400",
+    bg: "bg-amber-500/10",
+  },
+  edit: {
+    icon: <FileEdit size={12} />,
+    label: "Edit",
+    color: "text-blue-400",
+    bg: "bg-blue-500/10",
+  },
+  write: {
+    icon: <FilePenLine size={12} />,
+    label: "Write",
+    color: "text-emerald-400",
+    bg: "bg-emerald-500/10",
+  },
+  read: {
+    icon: <BookOpen size={12} />,
+    label: "Read",
+    color: "text-zinc-400",
+    bg: "bg-zinc-500/10",
+  },
+  grep: {
+    icon: <Search size={12} />,
+    label: "Grep",
+    color: "text-violet-400",
+    bg: "bg-violet-500/10",
+  },
+  find: {
+    icon: <FolderSearch size={12} />,
+    label: "Find",
+    color: "text-violet-400",
+    bg: "bg-violet-500/10",
+  },
+  ls: {
+    icon: <List size={12} />,
+    label: "List",
+    color: "text-zinc-400",
+    bg: "bg-zinc-500/10",
+  },
+};
+
+const DEFAULT_CONFIG: ToolConfig = {
+  icon: <Wrench size={12} />,
+  label: "Tool",
+  color: "text-zinc-400",
+  bg: "bg-zinc-500/10",
+};
+
+// ── Status indicator ─────────────────────────────────────────────────────
+
+function StatusIndicator({ status }: { status: ToolCallInfo["status"] }) {
+  switch (status) {
+    case "running":
+      return <Loader2 size={13} className="animate-spin text-amber-400" />;
+    case "completed":
+      return (
+        <span className="flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500/15">
+          <Check size={11} className="text-emerald-400" />
+        </span>
+      );
+    case "error":
+      return (
+        <span className="flex h-4 w-4 items-center justify-center rounded-full bg-red-500/15">
+          <X size={11} className="text-red-400" />
+        </span>
+      );
+  }
+}
+
+// ── Main Component ───────────────────────────────────────────────────────
 
 interface Props {
   toolCall: ToolCallInfo;
 }
 
-const TOOL_ICONS: Record<string, string> = {
-  bash: "⚡",
-  edit: "✏️",
-  write: "📝",
-  read: "📖",
-  grep: "🔍",
-  find: "📁",
-  ls: "📋",
-};
-
-const STATUS_ICONS: Record<ToolCallInfo["status"], React.ReactNode> = {
-  running: (
-    <svg
-      className="h-3.5 w-3.5 animate-spin text-[#d29922]"
-      viewBox="0 0 24 24"
-      fill="none"
-    >
-      <circle
-        className="opacity-25"
-        cx="12"
-        cy="12"
-        r="10"
-        stroke="currentColor"
-        strokeWidth="4"
-      />
-      <path
-        className="opacity-75"
-        fill="currentColor"
-        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-      />
-    </svg>
-  ),
-  completed: <span className="text-[#3fb950]">✓</span>,
-  error: <span className="text-[#f85149]">✗</span>,
-};
-
 export default function ToolCallPanel({ toolCall }: Props) {
   const [collapsed, setCollapsed] = useState(true);
   const [showFullOutput, setShowFullOutput] = useState(false);
+  const [showArgs, setShowArgs] = useState(false);
   const setCanvasVisible = useUIStore((s) => s.setCanvasVisible);
+  const setActiveFile = useCanvasStore((s) => s.setActiveFile);
 
-  const icon = TOOL_ICONS[toolCall.toolName] ?? "🔧";
-  const statusIcon = STATUS_ICONS[toolCall.status];
+  const config = TOOL_CONFIGS[toolCall.toolName] ?? DEFAULT_CONFIG;
   const args = toolCall.args as Record<string, unknown> | undefined;
-
   const filePath = extractFilePath(toolCall.toolName, args);
-  const isFileTool = ["edit", "write", "read"].includes(toolCall.toolName);
+  const canViewInCanvas = ["edit", "write"].includes(toolCall.toolName) && !!filePath;
 
   const outputText = extractOutput(toolCall);
   const isOutputLong = outputText.length > 500;
@@ -61,83 +127,155 @@ export default function ToolCallPanel({ toolCall }: Props) {
       ? outputText.slice(0, 500) + "…"
       : outputText;
 
+  const handleViewInCanvas = () => {
+    if (!filePath) return;
+    setCanvasVisible(true);
+    setActiveFile(filePath);
+  };
+
   return (
-    <div className="my-1 rounded border border-[#21262d] bg-[#161b22] overflow-hidden text-sm">
+    <div className="overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900 text-sm transition-colors duration-150">
       {/* Header */}
       <button
         type="button"
         onClick={() => setCollapsed((c) => !c)}
-        className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-[#8b949e] hover:bg-[#21262d] transition-colors"
+        className="flex w-full items-center gap-2 px-3 py-2 text-left transition-colors duration-150 hover:bg-zinc-800/60"
       >
-        <span className="text-xs">{icon}</span>
-        <span className="font-medium text-[#e6edf3]">{toolCall.toolName}</span>
+        {/* Tool name badge */}
+        <span
+          className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-medium ${config.color} ${config.bg}`}
+        >
+          {config.icon}
+          {config.label}
+        </span>
+
+        {/* File path or command */}
         {filePath && (
-          <span className="truncate text-[#58a6ff] text-xs">{filePath}</span>
+          <span className="flex items-center gap-1 truncate text-xs text-zinc-400">
+            <FileCode size={11} className="shrink-0 text-zinc-500" />
+            <span className="truncate font-mono">{filePath}</span>
+          </span>
         )}
-        <span className="ml-auto flex-shrink-0">{statusIcon}</span>
-        <span className="text-[#484f58] text-xs">
-          {collapsed ? "▸" : "▾"}
+        {toolCall.toolName === "bash" &&
+          typeof args?.command === "string" && (
+            <span className="truncate font-mono text-xs text-zinc-400">
+              $ {String(args.command)}
+            </span>
+          )}
+
+        <span className="flex-1" />
+
+        {/* Status */}
+        <StatusIndicator status={toolCall.status} />
+
+        {/* Expand toggle */}
+        <span className="text-zinc-600">
+          {collapsed ? <ChevronRight size={12} /> : <ChevronDown size={12} />}
         </span>
       </button>
 
       {/* Body */}
-      {!collapsed && (
-        <div className="border-t border-[#21262d] px-3 py-2 text-xs text-[#8b949e] font-mono space-y-2">
-          {/* Bash: command */}
-          {toolCall.toolName === "bash" && typeof args?.command === "string" && (
-            <div>
-              <span className="text-[#484f58]">$</span>{" "}
-              <span className="text-[#e6edf3]">{String(args.command)}</span>
-            </div>
-          )}
+      <AnimatePresence initial={false}>
+        {!collapsed && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.15, ease: "easeOut" }}
+            className="overflow-hidden"
+          >
+            <div className="border-t border-zinc-800 px-3 py-2.5 font-mono text-xs text-zinc-400 space-y-2">
+              {/* Edit: replacement count */}
+              {toolCall.toolName === "edit" && (() => {
+                const edits = args?.edits;
+                if (Array.isArray(edits)) {
+                  return (
+                    <div className="text-zinc-500">
+                      {edits.length} replacement{edits.length !== 1 ? "s" : ""}
+                    </div>
+                  );
+                }
+                return null;
+              })()}
 
-          {/* Edit: replacements count */}
-          {toolCall.toolName === "edit" && (() => {
-            const edits = args?.edits;
-            if (Array.isArray(edits)) {
-              return <div><span>{edits.length} replacement(s)</span></div>;
-            }
-            return null;
-          })()}
+              {/* Write: content length */}
+              {toolCall.toolName === "write" &&
+                typeof args?.content === "string" && (
+                  <div className="text-zinc-500">
+                    {args.content.length.toLocaleString()} chars
+                  </div>
+                )}
 
-          {/* Write: content length */}
-          {toolCall.toolName === "write" && typeof args?.content === "string" && (
-            <div>
-              {args.content.length.toLocaleString()} chars
-            </div>
-          )}
+              {/* Bash: full command */}
+              {toolCall.toolName === "bash" &&
+                typeof args?.command === "string" && (
+                  <div className="rounded bg-zinc-800/60 px-2 py-1.5 text-xs">
+                    <span className="text-amber-400">$</span>{" "}
+                    <span className="text-zinc-200">
+                      {String(args.command)}
+                    </span>
+                  </div>
+                )}
 
-          {/* Output / result */}
-          {outputText && (
-            <div>
-              <pre className="whitespace-pre-wrap break-all max-h-64 overflow-auto rounded bg-[#0d1117] p-2 text-[#8b949e]">
-                {displayOutput}
-              </pre>
-              {isOutputLong && (
+              {/* Output / result */}
+              {outputText && (
+                <div>
+                  <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-all rounded-md bg-zinc-800/60 p-2.5 text-xs text-zinc-400">
+                    {displayOutput}
+                  </pre>
+                  {isOutputLong && (
+                    <button
+                      type="button"
+                      onClick={() => setShowFullOutput((s) => !s)}
+                      className="mt-1 text-[11px] text-violet-400 transition-colors duration-150 hover:text-violet-300"
+                    >
+                      {showFullOutput ? "Show less" : "Show more"}
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* Args JSON viewer */}
+              {args && Object.keys(args).length > 0 && (
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => setShowArgs((s) => !s)}
+                    className="text-[11px] text-zinc-500 transition-colors duration-150 hover:text-zinc-400"
+                  >
+                    {showArgs ? "Hide args" : "Show args"}
+                  </button>
+                  <AnimatePresence>
+                    {showArgs && (
+                      <motion.pre
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.15 }}
+                        className="mt-1 max-h-48 overflow-auto whitespace-pre-wrap break-all rounded-md bg-zinc-800/60 p-2.5 text-[11px] text-zinc-500"
+                      >
+                        {JSON.stringify(args, null, 2)}
+                      </motion.pre>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )}
+
+              {/* View in Canvas button */}
+              {canViewInCanvas && (
                 <button
                   type="button"
-                  onClick={() => setShowFullOutput((s) => !s)}
-                  className="mt-1 text-[#58a6ff] hover:underline"
+                  onClick={handleViewInCanvas}
+                  className="inline-flex items-center gap-1.5 rounded-md bg-violet-500/10 px-2.5 py-1 text-[11px] font-medium text-violet-400 transition-colors duration-150 hover:bg-violet-500/20"
                 >
-                  {showFullOutput ? "Show less" : "Show more"}
+                  <FileCode size={11} />
+                  View in Canvas
                 </button>
               )}
             </div>
-          )}
-
-          {/* View in Canvas button for file tools */}
-          {isFileTool && filePath && (
-            <button
-              type="button"
-              onClick={() => setCanvasVisible(true)}
-              className="flex items-center gap-1 rounded bg-[#21262d] px-2 py-1 text-[#58a6ff] hover:bg-[#30363d] transition-colors"
-            >
-              <span>📄</span>
-              <span>View in Canvas</span>
-            </button>
-          )}
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

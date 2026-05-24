@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Cpu, ChevronDown, Check, Loader2 } from "lucide-react";
 import {
   getAvailableModels,
   setModel as rpcSetModel,
@@ -6,16 +8,46 @@ import {
 } from "@/lib/tauri-commands";
 import { useAgentStore } from "@/stores/agentStore";
 
-/**
- * Dropdown to select the active LLM model.
- *
- * Fetches available models on mount, shows them in a popover panel, and
- * calls the backend to switch on selection.
- */
+// ── Provider colors ──────────────────────────────────────────────────────
+
+const PROVIDER_COLORS: Record<string, string> = {
+  anthropic: "bg-orange-500/15 text-orange-400",
+  openai: "bg-emerald-500/15 text-emerald-400",
+  google: "bg-blue-500/15 text-blue-400",
+  xai: "bg-zinc-500/15 text-zinc-400",
+};
+
+function providerBadgeClass(provider: string): string {
+  const key = provider.toLowerCase();
+  for (const [pattern, cls] of Object.entries(PROVIDER_COLORS)) {
+    if (key.includes(pattern)) return cls;
+  }
+  return "bg-zinc-700/50 text-zinc-400";
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────
+
+function formatModelLabel(_provider: string, modelId: string): string {
+  const short = modelId
+    .replace(/-\d{8}$/, "")
+    .split("/")
+    .pop() ?? modelId;
+  return short.charAt(0).toUpperCase() + short.slice(1);
+}
+
+function formatContextWindow(tokens: number): string {
+  if (tokens >= 1_000_000) return `${(tokens / 1_000_000).toFixed(0)}M`;
+  if (tokens >= 1_000) return `${(tokens / 1_000).toFixed(0)}k`;
+  return String(tokens);
+}
+
+// ── Component ────────────────────────────────────────────────────────────
+
 export default function ModelSelector() {
   const [models, setModels] = useState<ModelInfo[]>([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [switchingTo, setSwitchingTo] = useState<string | null>(null);
   const currentModel = useAgentStore((s) => s.model);
   const storeSetModel = useAgentStore((s) => s.setModel);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -55,6 +87,8 @@ export default function ModelSelector() {
 
   const handleSelect = useCallback(
     async (model: ModelInfo) => {
+      const key = `${model.provider}-${model.id}`;
+      setSwitchingTo(key);
       setLoading(true);
       try {
         const confirmed = await rpcSetModel(model.provider, model.id);
@@ -63,6 +97,7 @@ export default function ModelSelector() {
         console.error("[ModelSelector] failed to set model:", err);
       } finally {
         setLoading(false);
+        setSwitchingTo(null);
         setOpen(false);
       }
     },
@@ -78,91 +113,91 @@ export default function ModelSelector() {
       <button
         onClick={() => setOpen(!open)}
         disabled={loading}
-        className="flex items-center gap-1.5 rounded px-2 py-1 text-xs text-text-secondary transition-colors hover:bg-dark-elevated hover:text-text-primary disabled:opacity-50"
+        className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-zinc-400 transition-colors duration-150 hover:bg-zinc-800 hover:text-zinc-200 disabled:opacity-50"
       >
-        <svg
-          width="14"
-          height="14"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
-          <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-          <line x1="12" y1="19" x2="12" y2="22" />
-        </svg>
-        <span className="max-w-[160px] truncate">{label}</span>
-        <svg
-          width="10"
-          height="10"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          className={`transition-transform ${open ? "rotate-180" : ""}`}
-        >
-          <polyline points="6 9 12 15 18 9" />
-        </svg>
+        <Cpu size={13} />
+        <span className="max-w-[140px] truncate">{label}</span>
+        <ChevronDown
+          size={11}
+          className={`transition-transform duration-150 ${open ? "rotate-180" : ""}`}
+        />
       </button>
 
-      {open && (
-        <div className="absolute left-0 top-full z-50 mt-1 w-64 overflow-hidden rounded-md border border-dark-border bg-dark-elevated shadow-xl">
-          <div className="max-h-64 overflow-y-auto p-1">
-            {models.length === 0 ? (
-              <div className="px-3 py-2 text-xs text-text-muted">
-                No models available
-              </div>
-            ) : (
-              models.map((model) => {
-                const isActive =
-                  currentModel?.provider === model.provider &&
-                  currentModel?.id === model.id;
-                return (
-                  <button
-                    key={`${model.provider}-${model.id}`}
-                    onClick={() => handleSelect(model)}
-                    className="flex w-full items-center gap-2 rounded px-3 py-2 text-left text-xs transition-colors hover:bg-dark-border"
-                  >
-                    {isActive ? (
-                      <svg
-                        width="14"
-                        height="14"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        className="shrink-0 text-accent-green"
-                      >
-                        <polyline points="20 6 9 17 4 12" />
-                      </svg>
-                    ) : (
-                      <span className="w-3.5 shrink-0" />
-                    )}
-                    <span className={isActive ? "text-text-primary" : "text-text-secondary"}>
-                      {formatModelLabel(model.provider, model.id)}
-                    </span>
-                  </button>
-                );
-              })
-            )}
-          </div>
-        </div>
-      )}
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: -4, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -4, scale: 0.98 }}
+            transition={{ duration: 0.15, ease: "easeOut" }}
+            className="absolute left-0 top-full z-50 mt-1 w-72 overflow-hidden rounded-lg border border-zinc-700 bg-zinc-800 shadow-xl"
+          >
+            <div className="max-h-72 overflow-y-auto p-1">
+              {models.length === 0 ? (
+                <div className="px-3 py-3 text-xs text-zinc-500">
+                  No models available
+                </div>
+              ) : (
+                models.map((model) => {
+                  const isActive =
+                    currentModel?.provider === model.provider &&
+                    currentModel?.id === model.id;
+                  const isSwitching =
+                    switchingTo === `${model.provider}-${model.id}`;
+
+                  return (
+                    <button
+                      key={`${model.provider}-${model.id}`}
+                      onClick={() => handleSelect(model)}
+                      className={`
+                        flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-xs transition-colors duration-150
+                        ${
+                          isActive
+                            ? "bg-violet-500/10 text-violet-300"
+                            : "text-zinc-300 hover:bg-zinc-700/60"
+                        }
+                      `}
+                    >
+                      {/* Active indicator */}
+                      {isActive ? (
+                        <Check size={14} className="shrink-0 text-violet-400" />
+                      ) : isSwitching ? (
+                        <Loader2
+                          size={14}
+                          className="shrink-0 animate-spin text-violet-400"
+                        />
+                      ) : (
+                        <span className="w-3.5 shrink-0" />
+                      )}
+
+                      {/* Model info */}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <span className="truncate font-medium">
+                            {formatModelLabel(model.provider, model.id)}
+                          </span>
+                        </div>
+                        <div className="mt-0.5 flex items-center gap-1.5">
+                          <span
+                            className={`inline-flex rounded px-1 py-px text-[10px] font-medium ${providerBadgeClass(model.provider)}`}
+                          >
+                            {model.provider}
+                          </span>
+                          {model.contextWindow > 0 && (
+                            <span className="text-[10px] text-zinc-600">
+                              {formatContextWindow(model.contextWindow)} ctx
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
-}
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
-function formatModelLabel(provider: string, modelId: string): string {
-  // Turn "claude-sonnet-4-20250514" → "Claude Sonnet 4"
-  const short = modelId
-    .replace(/-\d{8}$/, "") // Remove date suffix
-    .replace(/-/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase());
-
-  return `${short} (${provider})`;
 }

@@ -1,51 +1,83 @@
+import { motion } from "framer-motion";
+import {
+  Loader2,
+  Zap,
+  Hash,
+} from "lucide-react";
 import { useAgentStore } from "@/stores/agentStore";
 
 export default function StatusBar() {
   const model = useAgentStore((s) => s.model);
-  const thinkingLevel = useAgentStore((s) => s.thinkingLevel);
   const isStreaming = useAgentStore((s) => s.isStreaming);
   const isCompacting = useAgentStore((s) => s.isCompacting);
   const sessionStats = useAgentStore((s) => s.sessionStats);
-  const sessionName = useAgentStore((s) => s.sessionName);
+  const sessionId = useAgentStore((s) => s.sessionId);
 
-  const modelName = model ? `${model.provider} / ${model.id}` : "No model";
+  const modelName = model
+    ? (() => {
+        const short = model.id
+          .replace(/-\d{8}$/, "")
+          .split("/")
+          .pop() ?? model.id;
+        return short.charAt(0).toUpperCase() + short.slice(1);
+      })()
+    : "No model";
 
   return (
-    <div className="flex h-7 min-h-[28px] items-center justify-between bg-[#161b22] border-t border-[#21262d] px-3 text-xs text-[#8b949e] select-none">
-      {/* Left — model & thinking */}
+    <div className="flex h-7 min-h-[28px] items-center justify-between border-t border-zinc-800 bg-zinc-900 px-3 text-[11px] select-none">
+      {/* Left — model & provider */}
       <div className="flex items-center gap-2 min-w-0">
-        <span className="truncate">{modelName}</span>
-        <span className="inline-flex items-center rounded bg-[#21262d] px-1.5 py-px text-[10px] uppercase tracking-wide text-[#8b949e]">
-          {thinkingLevel}
-        </span>
+        <span className="font-medium text-violet-400">{modelName}</span>
+        {model && (
+          <span className="inline-flex items-center rounded bg-zinc-800 px-1.5 py-px text-[10px] uppercase tracking-wide text-zinc-500">
+            {model.provider}
+          </span>
+        )}
       </div>
 
-      {/* Center — streaming / compaction */}
+      {/* Center — streaming / compaction status */}
       <div className="flex items-center gap-2">
         {isStreaming && (
-          <span className="flex items-center gap-1">
-            <StreamingSpinner />
+          <motion.span
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex items-center gap-1.5 text-violet-400"
+          >
+            <Loader2 size={11} className="animate-spin" />
             <span>Streaming</span>
-          </span>
+          </motion.span>
         )}
         {isCompacting && (
-          <span className="flex items-center gap-1 text-[#d29922]">
-            <StreamingSpinner />
+          <motion.span
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex items-center gap-1.5 text-amber-400"
+          >
+            <Loader2 size={11} className="animate-spin" />
             <span>Compacting</span>
+          </motion.span>
+        )}
+        {!isStreaming && !isCompacting && sessionStats && (
+          <span className="flex items-center gap-1 text-zinc-500">
+            <Zap size={10} />
+            {fmtTokens(sessionStats.tokens.total)} tokens
           </span>
         )}
       </div>
 
-      {/* Right — tokens & session */}
-      <div className="flex items-center gap-3 min-w-0">
+      {/* Right — session ID */}
+      <div className="flex items-center gap-2 min-w-0">
         {sessionStats && (
-          <span>
+          <span className="text-zinc-600">
             {fmtTokens(sessionStats.tokens.input)}↓{" "}
             {fmtTokens(sessionStats.tokens.output)}↑
           </span>
         )}
-        {sessionName && (
-          <span className="truncate text-[#484f58]">{sessionName}</span>
+        {sessionId && (
+          <span className="flex items-center gap-1 text-zinc-600">
+            <Hash size={10} />
+            {sessionId.slice(0, 8)}
+          </span>
         )}
       </div>
     </div>
@@ -58,29 +90,4 @@ function fmtTokens(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
   return String(n);
-}
-
-function StreamingSpinner() {
-  return (
-    <svg
-      className="h-3 w-3 animate-spin"
-      viewBox="0 0 24 24"
-      fill="none"
-      aria-hidden="true"
-    >
-      <circle
-        className="opacity-25"
-        cx="12"
-        cy="12"
-        r="10"
-        stroke="currentColor"
-        strokeWidth="4"
-      />
-      <path
-        className="opacity-75"
-        fill="currentColor"
-        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-      />
-    </svg>
-  );
 }

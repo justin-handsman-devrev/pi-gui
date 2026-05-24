@@ -1,13 +1,11 @@
+import { motion } from "framer-motion";
 import { useAgentStore } from "@/stores/agentStore";
 import { setThinkingLevel as rpcSetThinkingLevel } from "@/lib/tauri-commands";
 
-type Level = "off" | "low" | "medium" | "high";
+type Level = "off" | "minimal" | "low" | "medium" | "high" | "xhigh";
 
-const LEVELS: Level[] = ["off", "low", "medium", "high"];
+const LEVELS: Level[] = ["off", "minimal", "low", "medium", "high", "xhigh"];
 
-/**
- * Inline thinking-level toggle: Off / Low / Medium / High.
- */
 export default function ThinkingSelector() {
   const currentLevel = useAgentStore((s) => s.thinkingLevel);
   const storeSetLevel = useAgentStore((s) => s.setThinkingLevel);
@@ -22,25 +20,31 @@ export default function ThinkingSelector() {
   };
 
   return (
-    <div className="flex items-center gap-0.5 rounded bg-dark-bg p-0.5">
+    <div className="flex items-center gap-0.5 rounded-lg bg-zinc-800 p-0.5">
       {LEVELS.map((level) => {
-        const isActive =
-          currentLevel.toLowerCase() === level;
+        const isActive = currentLevel.toLowerCase() === level;
         return (
           <button
             key={level}
             onClick={() => handleSelect(level)}
             className={`
-              rounded px-2 py-0.5 text-xs font-medium capitalize transition-colors
+              relative rounded-md px-2.5 py-1 text-xs font-medium capitalize transition-colors duration-150
               ${
                 isActive
-                  ? "bg-dark-elevated text-accent-blue shadow-sm"
-                  : "text-text-muted hover:text-text-secondary"
+                  ? "text-white"
+                  : "text-zinc-500 hover:bg-zinc-700 hover:text-zinc-300"
               }
             `}
             aria-pressed={isActive}
           >
-            {level}
+            {isActive && (
+              <motion.span
+                layoutId="thinking-pill-bg"
+                className="absolute inset-0 rounded-md bg-violet-500"
+                transition={{ type: "spring", stiffness: 400, damping: 30 }}
+              />
+            )}
+            <span className="relative z-10">{level}</span>
           </button>
         );
       })}

@@ -53,15 +53,33 @@ impl PiBridge {
     ) -> Result<Self, String> {
         let pi_path = resolve_pi_path()?;
 
+        // Build a PATH that includes common macOS locations.
+        // macOS GUI apps don't inherit the user's shell PATH, so node/npm/pi
+        // won't be found via `#!/usr/bin/env node` unless we set this.
+        let extra_paths = [
+            "/opt/homebrew/bin",
+            "/usr/local/bin",
+            "/opt/local/bin",
+            "/usr/bin",
+            "/bin",
+            "/usr/sbin",
+            "/sbin",
+        ];
+        let inherited_path = std::env::var("PATH").unwrap_or_default();
+        let full_path = format!("{}:{}", extra_paths.join(":"), inherited_path);
+
         let mut child = tokio::process::Command::new(&pi_path)
             .arg("--mode")
             .arg("rpc")
             .current_dir(cwd)
+            .env("PATH", &full_path)
+            .env("HOME", std::env::var("HOME").unwrap_or_else(|_| "/".into()))
+            .env("TERM", "xterm-256color")
             .stdin(std::process::Stdio::piped())
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::piped())
             .spawn()
-            .map_err(|e| format!("Failed to spawn pi --rpc at {}: {e}", pi_path))?;
+            .map_err(|e| format!("Failed to spawn pi at {}: {e}", pi_path))?;
 
         let stdin = child
             .stdin

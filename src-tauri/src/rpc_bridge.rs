@@ -68,10 +68,23 @@ impl PiBridge {
         let inherited_path = std::env::var("PATH").unwrap_or_default();
         let full_path = format!("{}:{}", extra_paths.join(":"), inherited_path);
 
+        // Expand ~ to $HOME — Rust doesn't do shell tilde expansion
+        let cwd = if cwd.starts_with("~/") {
+            if let Ok(home) = std::env::var("HOME") {
+                format!("{}{}", home, &cwd[1..])
+            } else {
+                cwd.to_string()
+            }
+        } else if cwd == "~" {
+            std::env::var("HOME").unwrap_or_else(|_| ".".into())
+        } else {
+            cwd.to_string()
+        };
+
         let mut child = tokio::process::Command::new(&pi_path)
             .arg("--mode")
             .arg("rpc")
-            .current_dir(cwd)
+            .current_dir(&cwd)
             .env("PATH", &full_path)
             .env("HOME", std::env::var("HOME").unwrap_or_else(|_| "/".into()))
             .env("TERM", "xterm-256color")

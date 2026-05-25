@@ -7,7 +7,7 @@ import {
   type ModelInfo,
 } from "@/lib/tauri-commands";
 import { useAgentStore } from "@/stores/agentStore";
-import { fullModelLabel } from "@/lib/model-name";
+import { displayModelLabel, fullModelLabel } from "@/lib/model-name";
 
 function formatModelLabel(_provider: string, modelId: string): string {
   const short = modelId.replace(/-\d{8}$/, "").split("/").pop() ?? modelId;
@@ -85,8 +85,12 @@ export default function InlineModelSelector({ variant = "inline" }: InlineModelS
 
   const label = currentModel
     ? variant === "footer"
-      ? fullModelLabel(currentModel.provider, currentModel.id)
+      ? displayModelLabel(currentModel.provider, currentModel.id)
       : formatModelLabel(currentModel.provider, currentModel.id)
+    : "Select model";
+
+  const fullTitle = currentModel
+    ? `${currentModel.provider}/${currentModel.id}`
     : "Select model";
 
   const triggerClass = variant === "footer" ? "app-footer-control app-footer-model" : "";
@@ -98,7 +102,7 @@ export default function InlineModelSelector({ variant = "inline" }: InlineModelS
         onClick={handleOpen}
         disabled={loading}
         className={triggerClass || undefined}
-        title={currentModel ? `${currentModel.provider}/${currentModel.id}` : "Select model"}
+        title={fullTitle}
         style={
           variant === "inline"
             ? {
@@ -158,7 +162,7 @@ export default function InlineModelSelector({ variant = "inline" }: InlineModelS
             exit={{ opacity: 0, y: 4 }}
             transition={{ duration: 0.12 }}
             className="app-footer-menu app-footer-model-menu"
-            style={{ width: 280 }}
+            style={{ width: "min(420px, 90vw)" }}
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ maxHeight: 280, overflowY: "auto", padding: 6 }}>

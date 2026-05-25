@@ -3109,7 +3109,7 @@ body {
 }
 
 .app-footer-center {
-  flex: 0 1 220px;
+  flex: 0 1 160px;
   justify-content: center;
   min-width: 0;
 }
@@ -3219,9 +3219,9 @@ body {
 }
 
 .app-footer-model {
-  max-width: min(420px, 55vw);
+  max-width: min(560px, 50vw);
   min-width: 0;
-  flex-shrink: 1;
+  flex-shrink: 0;
 }
 
 .app-footer-model-label {
@@ -3229,6 +3229,8 @@ body {
   min-width: 0;
   text-align: left;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .app-footer-toggle {

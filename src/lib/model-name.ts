@@ -45,8 +45,15 @@ export function fullModelName(id: string): string {
   return s.replace(/-\d{8}$/, "");
 }
 
+/** Footer / selector label — provider/id with only date suffix stripped. */
+export function displayModelLabel(provider: string, id: string): string {
+  if (!id) return provider || "";
+  const cleanId = id.replace(/-\d{8}$/, "");
+  if (cleanId.includes("/") || cleanId.includes(":")) return cleanId;
+  if (!provider) return cleanId;
+  return `${provider}/${cleanId}`;
+}
+
 export function fullModelLabel(provider: string, id: string): string {
-  const name = fullModelName(id);
-  if (!provider || name.includes("/") || name.includes(":")) return name;
-  return `${provider}/${name}`;
+  return displayModelLabel(provider, id);
 }

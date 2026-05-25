@@ -6,10 +6,11 @@ import { useUIStore } from "@/stores/uiStore";
 import { useCanvasStore } from "@/canvas/canvasStore";
 import {
   extractToolFilePath,
-  extractToolOutput,
   getToolSummaryLine,
   getToolVisual,
 } from "@/lib/tool-utils";
+import { formatToolArgs, parseToolOutput } from "@/lib/tool-output";
+import ToolCallOutput from "./ToolCallOutput";
 
 interface ToolCallPanelProps {
   toolCall: ToolCallInfo;
@@ -18,8 +19,6 @@ interface ToolCallPanelProps {
 
 export default function ToolCallPanel({ toolCall, isLast = false }: ToolCallPanelProps) {
   const [expanded, setExpanded] = useState(false);
-  const [showFullOutput, setShowFullOutput] = useState(false);
-  const [showArgs, setShowArgs] = useState(false);
   const setCanvasVisible = useUIStore((s) => s.setCanvasVisible);
   const setActiveFile = useCanvasStore((s) => s.setActiveFile);
 
@@ -28,11 +27,12 @@ export default function ToolCallPanel({ toolCall, isLast = false }: ToolCallPane
   const filePath = extractToolFilePath(toolCall.toolName, args);
   const canView = ["edit", "write"].includes(toolCall.toolName) && !!filePath;
   const summary = getToolSummaryLine(toolCall);
-  const outputText = extractToolOutput(toolCall);
-  const isLong = outputText.length > 500;
-  const display = !showFullOutput && isLong ? `${outputText.slice(0, 500)}…` : outputText;
+  const rawResult = toolCall.partialResult ?? toolCall.result;
+  const parsed = parseToolOutput(toolCall.toolName, rawResult);
+  const argChips = formatToolArgs(args);
   const bashCommand = typeof args?.command === "string" ? args.command : null;
-  const hasDetails = !!outputText || !!args || canView || bashCommand !== null;
+  const hasOutput = parsed.kind !== "empty" || rawResult != null;
+  const hasDetails = hasOutput || argChips.length > 0 || canView || bashCommand !== null;
 
   return (
     <li
@@ -88,6 +88,17 @@ export default function ToolCallPanel({ toolCall, isLast = false }: ToolCallPane
               className="chat-tool-item-body-wrap"
             >
               <div className="chat-tool-item-body">
+                {argChips.length > 0 && (
+                  <div className="chat-tool-arg-row">
+                    {argChips.map(({ key, value }) => (
+                      <span key={key} className="chat-tool-arg-chip">
+                        <span className="chat-tool-arg-key">{key}</span>
+                        <span className="chat-tool-arg-value">{value}</span>
+                      </span>
+                    ))}
+                  </div>
+                )}
+
                 {bashCommand && (
                   <div className="chat-tool-code-block">
                     <span className="chat-tool-code-prompt">$</span>
@@ -95,45 +106,12 @@ export default function ToolCallPanel({ toolCall, isLast = false }: ToolCallPane
                   </div>
                 )}
 
-                {outputText && (
-                  <div className="chat-tool-output">
-                    <div className="chat-tool-output-label">Output</div>
-                    <pre className="chat-tool-output-pre">{display}</pre>
-                    {isLong && (
-                      <button
-                        type="button"
-                        className="chat-tool-text-btn"
-                        onClick={() => setShowFullOutput((value) => !value)}
-                      >
-                        {showFullOutput ? "Show less" : "Show more"}
-                      </button>
-                    )}
-                  </div>
-                )}
-
-                {args && Object.keys(args).length > 0 && (
-                  <div className="chat-tool-args">
-                    <button
-                      type="button"
-                      className="chat-tool-text-btn"
-                      onClick={() => setShowArgs((value) => !value)}
-                    >
-                      {showArgs ? "Hide arguments" : "Show arguments"}
-                    </button>
-                    <AnimatePresence initial={false}>
-                      {showArgs && (
-                        <motion.pre
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: "auto", opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.14 }}
-                          className="chat-tool-args-pre"
-                        >
-                          {JSON.stringify(args, null, 2)}
-                        </motion.pre>
-                      )}
-                    </AnimatePresence>
-                  </div>
+                {hasOutput && (
+                  <ToolCallOutput
+                    parsed={parsed}
+                    toolName={toolCall.toolName}
+                    rawValue={rawResult}
+                  />
                 )}
 
                 {canView && (

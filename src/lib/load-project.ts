@@ -9,6 +9,7 @@ import { useAgentStore } from "@/stores/agentStore";
 import { initFileTree } from "@/lib/init-file-tree";
 import { syncAgentQueuesFromState } from "@/lib/sync-agent-queues";
 import { refreshSessionStats } from "@/lib/session-stats";
+import { invalidateSlashCommandCache } from "@/lib/slash-commands";
 import { useFileTreeStore } from "@/stores/fileTreeStore";
 import { useNotificationStore } from "@/stores/notificationStore";
 import { useUIStore } from "@/stores/uiStore";
@@ -33,6 +34,7 @@ export async function loadProject(cwd: string): Promise<boolean> {
 
   try {
     await startAgent(target);
+    invalidateSlashCommandCache();
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
     const [state, messagesData] = await Promise.all([getState(), getMessages()]);

@@ -85,6 +85,8 @@ export function getToolLabel(toolName: string): string {
     grep: "Grep",
     find: "Find",
     ls: "List",
+    list: "List",
+    list_dir: "List",
   };
   return labels[toolName] ?? toolName;
 }

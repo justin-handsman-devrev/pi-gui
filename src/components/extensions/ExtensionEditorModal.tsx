@@ -1,4 +1,6 @@
 import { useEffect } from "react";
+import { createPortal } from "react-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import { Trash2, X } from "lucide-react";
 
 export type EditorFieldType = "text" | "textarea" | "select" | "checkbox" | "tags";
@@ -17,6 +19,7 @@ export interface EditorField {
 interface ExtensionEditorModalProps {
   open: boolean;
   title: string;
+  subtitle?: string;
   fields: EditorField[];
   values: Record<string, string | boolean>;
   onChange: (key: string, value: string | boolean) => void;
@@ -30,6 +33,7 @@ interface ExtensionEditorModalProps {
 export function ExtensionEditorModal({
   open,
   title,
+  subtitle,
   fields,
   values,
   onChange,
@@ -44,118 +48,150 @@ export function ExtensionEditorModal({
     const handler = (event: KeyboardEvent) => {
       if (event.key === "Escape") onCancel();
     };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
   }, [open, onCancel]);
 
-  if (!open) return null;
+  return createPortal(
+    <AnimatePresence>
+      {open && (
+        <>
+          <motion.button
+            type="button"
+            className="ext-editor-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={onCancel}
+            aria-label="Close editor"
+          />
 
-  return (
-    <div className="ext-editor-backdrop" onClick={onCancel}>
-      <div
-        className="ext-editor-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="ext-editor-title"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="ext-editor-header">
-          <h3 id="ext-editor-title" className="ext-editor-title">{title}</h3>
-          <button type="button" className="ext-icon-btn" onClick={onCancel} aria-label="Close">
-            <X size={14} />
-          </button>
-        </div>
+          <motion.aside
+            className="ext-editor-panel"
+            initial={{ x: "100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: "100%" }}
+            transition={{ type: "spring", stiffness: 320, damping: 34 }}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="ext-editor-title"
+          >
+            <div className="settings-panel-bg" aria-hidden="true">
+              <div className="orb orb-lavender settings-panel-orb settings-panel-orb-a" />
+              <div className="orb orb-peach settings-panel-orb settings-panel-orb-b" />
+            </div>
 
-        <div className="ext-editor-body">
-          {fields.map((field) => {
-            const value = values[field.key];
+            <header className="settings-panel-top">
+              <div className="settings-panel-top-copy">
+                <h2 id="ext-editor-title" className="settings-panel-title">{title}</h2>
+                {subtitle && (
+                  <p className="settings-panel-subtitle">{subtitle}</p>
+                )}
+              </div>
+              <button
+                type="button"
+                className="ext-icon-btn"
+                onClick={onCancel}
+                aria-label="Close"
+              >
+                <X size={15} />
+              </button>
+            </header>
 
-            if (field.type === "checkbox") {
-              return (
-                <label key={field.key} className="ext-editor-check">
-                  <input
-                    type="checkbox"
-                    checked={value === true}
-                    onChange={(event) => onChange(field.key, event.target.checked)}
-                  />
-                  <span>{field.label}</span>
-                </label>
-              );
-            }
+            <div className="ext-editor-panel-body">
+              {fields.map((field) => {
+                const value = values[field.key];
 
-            if (field.type === "select") {
-              return (
-                <label key={field.key} className="ext-editor-field">
-                  <span className="ext-editor-label">{field.label}</span>
-                  <select
-                    className="ext-editor-input"
-                    value={typeof value === "string" ? value : ""}
-                    onChange={(event) => onChange(field.key, event.target.value)}
-                  >
-                    {(field.options ?? []).map((option) => (
-                      <option key={option} value={option}>{option}</option>
-                    ))}
-                  </select>
-                  {field.hint && <span className="ext-editor-hint">{field.hint}</span>}
-                </label>
-              );
-            }
+                if (field.type === "checkbox") {
+                  return (
+                    <label key={field.key} className="ext-editor-check">
+                      <input
+                        type="checkbox"
+                        checked={value === true}
+                        onChange={(event) => onChange(field.key, event.target.checked)}
+                      />
+                      <span>{field.label}</span>
+                    </label>
+                  );
+                }
 
-            if (field.type === "textarea") {
-              return (
-                <label key={field.key} className="ext-editor-field">
-                  <span className="ext-editor-label">{field.label}</span>
-                  <textarea
-                    className="ext-editor-textarea"
-                    rows={field.rows ?? 4}
-                    placeholder={field.placeholder}
-                    value={typeof value === "string" ? value : ""}
-                    onChange={(event) => onChange(field.key, event.target.value)}
-                  />
-                  {field.hint && <span className="ext-editor-hint">{field.hint}</span>}
-                </label>
-              );
-            }
+                if (field.type === "select") {
+                  return (
+                    <label key={field.key} className="ext-editor-field">
+                      <span className="ext-editor-label">{field.label}</span>
+                      <select
+                        className="ext-editor-input"
+                        value={typeof value === "string" ? value : ""}
+                        onChange={(event) => onChange(field.key, event.target.value)}
+                      >
+                        {(field.options ?? []).map((option) => (
+                          <option key={option} value={option}>{option}</option>
+                        ))}
+                      </select>
+                      {field.hint && <span className="ext-editor-hint">{field.hint}</span>}
+                    </label>
+                  );
+                }
 
-            return (
-              <label key={field.key} className="ext-editor-field">
-                <span className="ext-editor-label">{field.label}</span>
-                <input
-                  type="text"
-                  className="ext-editor-input"
-                  placeholder={field.placeholder}
-                  value={typeof value === "string" ? value : ""}
-                  onChange={(event) => onChange(field.key, event.target.value)}
-                />
-                {field.hint && <span className="ext-editor-hint">{field.hint}</span>}
-              </label>
-            );
-          })}
-        </div>
+                if (field.type === "textarea") {
+                  return (
+                    <label key={field.key} className="ext-editor-field">
+                      <span className="ext-editor-label">{field.label}</span>
+                      <textarea
+                        className="ext-editor-textarea"
+                        rows={field.rows ?? 4}
+                        placeholder={field.placeholder}
+                        value={typeof value === "string" ? value : ""}
+                        onChange={(event) => onChange(field.key, event.target.value)}
+                      />
+                      {field.hint && <span className="ext-editor-hint">{field.hint}</span>}
+                    </label>
+                  );
+                }
 
-        <div className="ext-editor-footer">
-          {onDelete && (
-            <button
-              type="button"
-              className="ext-editor-delete"
-              onClick={onDelete}
-              disabled={saving}
-            >
-              <Trash2 size={12} />
-              Delete
-            </button>
-          )}
-          <div className="ext-editor-footer-actions">
-            <button type="button" className="skills-btn-secondary" onClick={onCancel} disabled={saving}>
-              Cancel
-            </button>
-            <button type="button" className="skills-btn-primary" onClick={onSave} disabled={saving}>
-              {saveLabel}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+                return (
+                  <label key={field.key} className="ext-editor-field">
+                    <span className="ext-editor-label">{field.label}</span>
+                    <input
+                      type="text"
+                      className="ext-editor-input"
+                      placeholder={field.placeholder}
+                      value={typeof value === "string" ? value : ""}
+                      onChange={(event) => onChange(field.key, event.target.value)}
+                    />
+                    {field.hint && <span className="ext-editor-hint">{field.hint}</span>}
+                  </label>
+                );
+              })}
+            </div>
+
+            <footer className="ext-editor-footer">
+              {onDelete && (
+                <button
+                  type="button"
+                  className="ext-editor-delete"
+                  onClick={onDelete}
+                  disabled={saving}
+                >
+                  <Trash2 size={12} />
+                  Delete
+                </button>
+              )}
+              <div className="ext-editor-footer-actions">
+                <button type="button" className="skills-btn-secondary" onClick={onCancel} disabled={saving}>
+                  Cancel
+                </button>
+                <button type="button" className="skills-btn-primary" onClick={onSave} disabled={saving}>
+                  {saveLabel}
+                </button>
+              </div>
+            </footer>
+          </motion.aside>
+        </>
+      )}
+    </AnimatePresence>,
+    document.body,
   );
 }
 

@@ -30,6 +30,7 @@ pub fn run() {
             commands::switch_session,
             commands::get_messages,
             commands::get_session_stats,
+            commands::get_commands,
             commands::resolve_session_path,
             commands::list_directory,
             commands::read_text_file,

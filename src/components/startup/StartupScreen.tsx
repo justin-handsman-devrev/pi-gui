@@ -4,6 +4,7 @@ import { ArrowRight, FolderOpen, FolderSearch, Sparkles, Terminal } from "lucide
 import { startAgent, getState } from "@/lib/tauri-commands";
 import { syncAgentQueuesFromState } from "@/lib/sync-agent-queues";
 import { refreshSessionStats } from "@/lib/session-stats";
+import { invalidateSlashCommandCache } from "@/lib/slash-commands";
 import { useAgentStore } from "@/stores/agentStore";
 import { CWD_KEY, setActiveProjectCwd } from "@/lib/project-cwd";
 import { initFileTree } from "@/lib/init-file-tree";
@@ -31,6 +32,7 @@ export default function StartupScreen({ onStarted }: StartupScreenProps) {
 
       try {
         await startAgent(target);
+        invalidateSlashCommandCache();
         await new Promise((r) => setTimeout(r, 1000));
         const state = await getState();
         if (state?.model) useAgentStore.getState().setModel(state.model);

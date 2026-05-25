@@ -253,6 +253,7 @@ export default function PromptLibraryTab({ embedded = false }: PromptLibraryTabP
       <ExtensionEditorModal
         open={editorOpen}
         title={editingId ? "Edit prompt" : "Add prompt"}
+        subtitle={editingId ? "Update template text and category" : "Create a reusable prompt template"}
         fields={PROMPT_FIELDS}
         values={form}
         onChange={(key, value) => setForm((prev) => ({ ...prev, [key]: value }))}

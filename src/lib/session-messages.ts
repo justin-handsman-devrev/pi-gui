@@ -40,7 +40,6 @@ function mapAssistantMessage(msg: AgentMessage, index: number): Message | null {
   const toolCalls = extractToolCalls(contentBlocks);
   const parsed = parseAssistantContent(
     Array.isArray(contentBlocks) ? contentBlocks as ContentBlock[] : undefined,
-    toolCalls.length > 0,
   );
 
   const responseText = parsed.response;

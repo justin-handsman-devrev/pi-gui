@@ -193,6 +193,20 @@ pub async fn get_session_stats(
 }
 
 #[tauri::command]
+pub async fn get_commands(
+    state: tauri::State<'_, PiBridgeState>,
+) -> Result<serde_json::Value, String> {
+    let guard = state.lock().await;
+    let bridge = guard.bridge.as_ref().ok_or("Agent not started")?;
+    let resp = bridge.get_commands().await?;
+    if resp.success {
+        Ok(resp.data.unwrap_or(serde_json::Value::Null))
+    } else {
+        Err(resp.error.unwrap_or_else(|| "Unknown error".into()))
+    }
+}
+
+#[tauri::command]
 pub fn resolve_session_path(
     session_arg: String,
     cwd_hint: Option<String>,

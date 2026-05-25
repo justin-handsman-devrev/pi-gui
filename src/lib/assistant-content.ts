@@ -18,7 +18,6 @@ function joinText(parts: string[]): string {
  */
 export function parseAssistantContent(
   content: Array<Record<string, unknown>> | undefined,
-  hasToolCalls = false,
 ): ParsedAssistantContent {
   if (!content || !Array.isArray(content)) {
     return { thinking: null, preamble: "", response: "" };
@@ -58,11 +57,7 @@ export function parseAssistantContent(
   const thinking = rawThinking ? sanitizeThinkingText(rawThinking) : null;
 
   if (lastToolIndex === -1) {
-    const allText = joinText(beforeToolParts);
-    if (hasToolCalls) {
-      return { thinking, preamble: allText, response: "" };
-    }
-    return { thinking, preamble: "", response: allText };
+    return { thinking, preamble: "", response: joinText(beforeToolParts) };
   }
 
   return {

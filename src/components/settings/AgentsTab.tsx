@@ -273,6 +273,7 @@ export default function AgentsTab({ embedded = false }: AgentsTabProps) {
       <ExtensionEditorModal
         open={editorOpen}
         title={editingId ? "Edit agent" : "Add agent"}
+        subtitle={editingId ? "Update subagent profile and routing" : "Create a new subagent profile"}
         fields={AGENT_FIELDS}
         values={form}
         onChange={(key, value) => setForm((prev) => ({ ...prev, [key]: value }))}

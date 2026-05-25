@@ -50,35 +50,37 @@ export default function App() {
 
   return (
     <div className="el-app flex h-screen flex-col overflow-hidden">
-      <div className="el-app-shell">
-        <Sidebar />
+      <div className="el-app-scaled flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div className="el-app-shell">
+          <Sidebar />
 
-        <div className="el-main-stage">
-          <div className="relative flex min-w-0 flex-1 flex-col">
-            <Group
-              orientation="horizontal"
-              id="pi-gui-main"
-              className="min-h-0 flex-1"
-              style={{ height: "100%", width: "100%" }}
-            >
-              <Panel id="chat" defaultSize={canvasVisible ? 55 : 100} minSize={25} className="relative flex min-w-0 flex-col">
-                {showCanvasToggle && <CanvasToggle />}
-                <MainPanel />
-              </Panel>
-
-              {canvasVisible && <Separator className="resize-handle" style={{ width: 1, background: "transparent" }} />}
-
-              {canvasVisible && (
-                <Panel id="canvas" defaultSize={45} minSize={24} className="flex min-w-0 flex-col">
-                  <CanvasPane />
+          <div className="el-main-stage">
+            <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+              <Group
+                orientation="horizontal"
+                id="pi-gui-main"
+                className="min-h-0 flex-1"
+                style={{ height: "100%", width: "100%" }}
+              >
+                <Panel id="chat" defaultSize={canvasVisible ? 55 : 100} minSize={25} className="relative flex min-h-0 min-w-0 flex-col overflow-hidden">
+                  {showCanvasToggle && <CanvasToggle />}
+                  <MainPanel />
                 </Panel>
-              )}
-            </Group>
+
+                {canvasVisible && <Separator className="resize-handle" style={{ width: 1, background: "transparent" }} />}
+
+                {canvasVisible && (
+                  <Panel id="canvas" defaultSize={45} minSize={24} className="flex min-h-0 min-w-0 flex-col overflow-hidden">
+                    <CanvasPane />
+                  </Panel>
+                )}
+              </Group>
+            </div>
           </div>
         </div>
-      </div>
 
-      <AppFooter />
+        <AppFooter />
+      </div>
       <SettingsPanel />
 
       <NotificationToasts />

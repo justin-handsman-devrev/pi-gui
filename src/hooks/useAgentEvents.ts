@@ -63,10 +63,7 @@ function handleEvent(payload: Record<string, unknown>) {
       const message = payload.message as Record<string, unknown> | undefined;
       if (message?.role === "assistant") {
         const content = message.content as Array<Record<string, unknown>> | undefined;
-        const messages = useAgentStore.getState().messages;
-        const last = messages[messages.length - 1];
-        const hasToolCalls = (last?.toolCalls.length ?? 0) > 0;
-        store.updateAssistantContent(parseAssistantContent(content, hasToolCalls));
+        store.updateAssistantContent(parseAssistantContent(content));
       }
       break;
     }
@@ -74,10 +71,7 @@ function handleEvent(payload: Record<string, unknown>) {
       const message = payload.message as Record<string, unknown> | undefined;
       if (message?.role === "assistant") {
         const content = message.content as Array<Record<string, unknown>> | undefined;
-        const messages = useAgentStore.getState().messages;
-        const last = messages[messages.length - 1];
-        const hasToolCalls = (last?.toolCalls.length ?? 0) > 0;
-        store.updateAssistantContent(parseAssistantContent(content, hasToolCalls));
+        store.updateAssistantContent(parseAssistantContent(content));
       }
       break;
     }

@@ -19,34 +19,42 @@ const SHORTCUTS = [
   { key: "⌘N", label: "New chat" },
 ];
 
+const NEAR_BOTTOM_THRESHOLD = 120;
+
 export default function ChatView() {
   const messages = useAgentStore((s) => s.messages);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const bottomRef = useRef<HTMLDivElement>(null);
   const isNearBottomRef = useRef(true);
   const [unreadCount, setUnreadCount] = useState(0);
+
+  const scrollThreadToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollTo({ top: el.scrollHeight, behavior });
+    setUnreadCount(0);
+    isNearBottomRef.current = true;
+  }, []);
 
   const handleScroll = useCallback(() => {
     const el = scrollRef.current;
     if (!el) return;
     isNearBottomRef.current =
-      el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+      el.scrollHeight - el.scrollTop - el.clientHeight < NEAR_BOTTOM_THRESHOLD;
   }, []);
 
   useEffect(() => {
+    const last = messages[messages.length - 1];
+    const isStreaming = last?.isStreaming === true;
+    const behavior: ScrollBehavior = isStreaming ? "auto" : "smooth";
+
     if (isNearBottomRef.current) {
-      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-      setUnreadCount(0);
+      requestAnimationFrame(() => {
+        scrollThreadToBottom(behavior);
+      });
     } else {
       setUnreadCount((prev) => prev + 1);
     }
-  }, [messages]);
-
-  const scrollToBottom = useCallback(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-    setUnreadCount(0);
-    isNearBottomRef.current = true;
-  }, []);
+  }, [messages, scrollThreadToBottom]);
 
   const handleFilesDropped = useCallback((files: File[]) => {
     window.dispatchEvent(
@@ -125,14 +133,13 @@ export default function ChatView() {
                 <MessageBubble message={msg} />
               </motion.div>
             ))}
-            <div ref={bottomRef} className="h-1" />
           </div>
         </div>
       </DragDropOverlay>
       <ScrollToBottomFAB
         scrollRef={scrollRef}
         unreadCount={unreadCount}
-        onScrollToBottom={scrollToBottom}
+        onScrollToBottom={() => scrollThreadToBottom("smooth")}
       />
     </div>
   );

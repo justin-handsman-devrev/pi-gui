@@ -119,6 +119,30 @@ export const switchSession = (sessionPath: string): Promise<{ cancelled?: boolea
 export const getMessages = (): Promise<unknown> =>
   safeInvoke("get_messages");
 
+export interface PiSlashCommandSourceInfo {
+  path?: string;
+  source?: string;
+  scope?: "user" | "project" | "temporary";
+  origin?: string;
+  baseDir?: string;
+}
+
+export interface PiSlashCommand {
+  name: string;
+  description?: string;
+  source: "extension" | "prompt" | "skill";
+  location?: "user" | "project" | "path";
+  path?: string;
+  sourceInfo?: PiSlashCommandSourceInfo;
+}
+
+export interface PiCommandsResult {
+  commands: PiSlashCommand[];
+}
+
+export const getCommands = (): Promise<PiCommandsResult> =>
+  safeInvoke("get_commands");
+
 export const resolveSessionPath = (
   sessionArg: string,
   cwdHint?: string,

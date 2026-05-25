@@ -4,7 +4,7 @@ import { compactSession } from "@/lib/tauri-commands";
 import { useAgentStore } from "@/stores/agentStore";
 import { useNotificationStore } from "@/stores/notificationStore";
 
-export default function CompactButton() {
+export default function CompactButton({ variant = "default" }: { variant?: "default" | "icon" }) {
   const isCompacting = useAgentStore((s) => s.isCompacting);
   const isStreaming = useAgentStore((s) => s.isStreaming);
   const addNotification = useNotificationStore((s) => s.addNotification);
@@ -26,6 +26,20 @@ export default function CompactButton() {
       addNotification({ type: "error", title: "Compaction failed" });
     }
   }, [isCompacting, isStreaming, addNotification]);
+
+  if (variant === "icon") {
+    return (
+      <button
+        onClick={handleCompact}
+        disabled={isCompacting || isStreaming}
+        className="app-footer-icon-btn"
+        title={isCompacting ? "Compacting…" : "Compact session context"}
+        aria-label="Compact session context"
+      >
+        <Minimize2 size={14} />
+      </button>
+    );
+  }
 
   return (
     <button

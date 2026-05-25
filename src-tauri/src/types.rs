@@ -96,6 +96,7 @@ pub enum RpcCommand {
     },
     GetMessages,
     GetSessionStats,
+    GetCommands,
 }
 
 // ── RPC Responses ─────────────────────────────────────────────────────

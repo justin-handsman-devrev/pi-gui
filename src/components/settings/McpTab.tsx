@@ -367,6 +367,7 @@ export default function McpTab({ embedded = false }: { embedded?: boolean }) {
       <ExtensionEditorModal
         open={editorOpen}
         title={editingId ? "Edit MCP server" : "Add MCP server"}
+        subtitle={editingId ? "Update server connection and tools" : "Connect a new MCP server to Pi"}
         fields={MCP_FIELDS}
         values={form}
         onChange={(key, value) => setForm((prev) => ({ ...prev, [key]: value }))}

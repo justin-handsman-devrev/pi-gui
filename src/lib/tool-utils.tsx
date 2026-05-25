@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import type { ToolCallInfo } from "@/stores/agentStore";
 import { extractToolDetail } from "@/lib/activity-utils";
+import { countToolOutput, extractToolResultText, getOutputCountLabel } from "@/lib/tool-output";
 
 export interface ToolVisual {
   icon: ReactNode;
@@ -28,7 +29,9 @@ export const TOOL_VISUALS: Record<string, ToolVisual> = {
   read:  { icon: <BookOpen size={ICON_SIZE} strokeWidth={ICON_STROKE} />, label: "Read",  tone: "mint" },
   grep:  { icon: <Search size={ICON_SIZE} strokeWidth={ICON_STROKE} />, label: "Grep",  tone: "lavender" },
   find:  { icon: <FolderSearch size={ICON_SIZE} strokeWidth={ICON_STROKE} />, label: "Find", tone: "lavender" },
-  ls:    { icon: <List size={ICON_SIZE} strokeWidth={ICON_STROKE} />, label: "List",  tone: "slate" },
+  ls:        { icon: <List size={ICON_SIZE} strokeWidth={ICON_STROKE} />, label: "List",  tone: "slate" },
+  list:      { icon: <List size={ICON_SIZE} strokeWidth={ICON_STROKE} />, label: "List",  tone: "slate" },
+  list_dir:  { icon: <List size={ICON_SIZE} strokeWidth={ICON_STROKE} />, label: "List",  tone: "slate" },
 };
 
 export const DEFAULT_TOOL_VISUAL: ToolVisual = {
@@ -49,29 +52,33 @@ export function summarizeToolCalls(toolCalls: ToolCallInfo[]) {
 
 export function getToolSummaryLine(toolCall: ToolCallInfo): string {
   const detail = extractToolDetail(toolCall);
+  const result = toolCall.partialResult ?? toolCall.result;
+  const count = toolCall.status !== "running" ? countToolOutput(toolCall.toolName, result) : null;
+
+  if (detail && count != null) {
+    return `${detail} · ${count} ${getOutputCountLabel(toolCall.toolName, count)}`;
+  }
+
   if (detail) return detail;
 
   const args = toolCall.args as Record<string, unknown> | undefined;
   if (toolCall.toolName === "edit" && Array.isArray(args?.edits)) {
-    const count = args.edits.length;
-    return `${count} replacement${count !== 1 ? "s" : ""}`;
+    const editCount = args.edits.length;
+    return `${editCount} replacement${editCount !== 1 ? "s" : ""}`;
   }
   if (toolCall.toolName === "write" && typeof args?.content === "string") {
     return `${args.content.length.toLocaleString()} chars`;
   }
 
-  return "Completed";
+  if (count != null) {
+    return `${count} ${count === 1 ? "result" : "results"}`;
+  }
+
+  return toolCall.status === "running" ? "Running…" : "Completed";
 }
 
 export function extractToolOutput(toolCall: ToolCallInfo): string {
-  const value = toolCall.partialResult ?? toolCall.result;
-  if (value == null) return "";
-  if (typeof value === "string") return value;
-  try {
-    return JSON.stringify(value, null, 2);
-  } catch {
-    return String(value);
-  }
+  return extractToolResultText(toolCall.partialResult ?? toolCall.result);
 }
 
 export function extractToolFilePath(

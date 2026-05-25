@@ -8,6 +8,9 @@
   isolation: isolate;
   background: var(--canvas);
   color: var(--body);
+}
+
+.el-app-scaled {
   zoom: var(--app-zoom, 1);
 }
 
@@ -70,6 +73,7 @@
   min-height: 0;
   flex: 1;
   flex-direction: column;
+  overflow: hidden;
 }
 
 /* ── Sidebar ───────────────────────────────────────────────────────────────── */
@@ -246,7 +250,7 @@
 }
 
 .el-app .chat-composer {
-  padding: var(--sp-2) var(--chat-gutter) var(--sp-3);
+  padding: var(--sp-3) var(--chat-gutter) var(--chat-pad-bottom);
   background: var(--canvas);
 }
 
@@ -505,10 +509,6 @@
 
 .el-app .sidebar-extensions-nav-item:hover {
   background: color-mix(in srgb, var(--surface-card) 70%, transparent);
-}
-
-.el-app .extensions-panel-body {
-  padding: var(--sp-4) var(--chat-gutter) var(--sp-8);
 }
 
 .startup-orb-d {

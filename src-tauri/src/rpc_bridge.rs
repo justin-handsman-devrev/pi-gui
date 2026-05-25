@@ -372,6 +372,10 @@ impl PiBridge {
         self.send_command(RpcCommand::GetSessionStats).await
     }
 
+    pub async fn get_commands(&self) -> Result<RpcResponse, String> {
+        self.send_command(RpcCommand::GetCommands).await
+    }
+
     /// Kill the child process.
     pub async fn stop(&self) -> Result<(), String> {
         let mut child = self.child.lock().await;

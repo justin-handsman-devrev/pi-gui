@@ -7,7 +7,7 @@ pub struct ImageContent {
     #[serde(rename = "type")]
     pub content_type: String, // always "image"
     pub data: String,
-    #[serde(rename = "mediaType")]
+    #[serde(rename = "mimeType")]
     pub media_type: String,
 }
 
@@ -68,6 +68,8 @@ pub enum RpcCommand {
     },
     Steer {
         message: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        images: Option<Vec<ImageContent>>,
     },
     Abort,
     NewSession {
@@ -88,6 +90,12 @@ pub enum RpcCommand {
         #[serde(rename = "customInstructions", skip_serializing_if = "Option::is_none")]
         custom_instructions: Option<String>,
     },
+    SwitchSession {
+        #[serde(rename = "sessionPath")]
+        session_path: String,
+    },
+    GetMessages,
+    GetSessionStats,
 }
 
 // ── RPC Responses ─────────────────────────────────────────────────────

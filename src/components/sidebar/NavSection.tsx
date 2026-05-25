@@ -3,7 +3,9 @@ import {
   MessageSquare,
   FolderOpen,
   Clock,
+  Activity,
   Settings,
+  Blocks,
 } from "lucide-react";
 import { useUIStore, type SidebarView } from "@/stores/uiStore";
 
@@ -11,73 +13,54 @@ interface NavItem {
   id: SidebarView;
   label: string;
   icon: ReactNode;
-  badge?: number;
 }
 
-interface NavSectionProps {
-  items?: NavItem[];
-}
-
-const defaultItems: NavItem[] = [
-  {
-    id: "chats",
-    label: "Chats",
-    icon: <MessageSquare size={16} />,
-  },
-  {
-    id: "projects",
-    label: "Projects",
-    icon: <FolderOpen size={16} />,
-  },
-  {
-    id: "scheduled",
-    label: "Scheduled",
-    icon: <Clock size={16} />,
-  },
-  {
-    id: "settings",
-    label: "Settings",
-    icon: <Settings size={16} />,
-  },
+const NAV_ITEMS: NavItem[] = [
+  { id: "chats", label: "Chats", icon: <MessageSquare size={13} strokeWidth={1.75} /> },
+  { id: "projects", label: "Projects", icon: <FolderOpen size={13} strokeWidth={1.75} /> },
+  { id: "scheduled", label: "Scheduled", icon: <Clock size={13} strokeWidth={1.75} /> },
+  { id: "activity", label: "Activity", icon: <Activity size={13} strokeWidth={1.75} /> },
+  { id: "extensions", label: "Extensions", icon: <Blocks size={13} strokeWidth={1.75} /> },
+  { id: "settings", label: "Settings", icon: <Settings size={13} strokeWidth={1.75} /> },
 ];
 
-export default function NavSection({ items = defaultItems }: NavSectionProps) {
+export default function NavSection() {
   const sidebarView = useUIStore((s) => s.sidebarView);
+  const settingsOpen = useUIStore((s) => s.settingsOpen);
   const setSidebarView = useUIStore((s) => s.setSidebarView);
+  const setSettingsOpen = useUIStore((s) => s.setSettingsOpen);
+
+  const handleSelect = (id: SidebarView) => {
+    setSidebarView(id);
+    if (id === "settings") {
+      setSettingsOpen(true);
+      return;
+    }
+    setSettingsOpen(false);
+    if (id === "extensions") {
+      useUIStore.getState().setCanvasVisible(false);
+    }
+  };
 
   return (
-    <nav className="flex flex-col gap-0.5 px-2">
-      {items.map((item) => {
-        const isActive = sidebarView === item.id;
+    <nav className="sidebar-nav" aria-label="Sidebar navigation">
+      {NAV_ITEMS.map((item) => {
+        const active =
+          item.id === "settings"
+            ? settingsOpen || sidebarView === item.id
+            : sidebarView === item.id;
 
         return (
           <button
             key={item.id}
-            onClick={() => setSidebarView(item.id)}
-            className={`
-              group flex items-center gap-2.5 rounded-lg px-3 py-2
-              text-[13px] leading-[1.4] font-medium
-              transition-all duration-150 ease-out
-              ${
-                isActive
-                  ? "bg-[#44403c]/50 text-[#fafaf9] border-l-2 border-[#9d8bb8] pl-[calc(0.75rem-2px)]"
-                  : "text-[#a8a29e] hover:bg-[#44403c]/30 hover:text-[#fafaf9] border-l-2 border-transparent pl-[calc(0.75rem-2px)]"
-              }
-            `}
+            type="button"
+            onClick={() => handleSelect(item.id)}
+            className={`sidebar-nav-item${active ? " is-active" : ""}`}
+            aria-current={active ? "page" : undefined}
+            title={item.label}
           >
-            <span
-              className={`shrink-0 transition-colors duration-150 ${
-                isActive ? "text-[#9d8bb8]" : "text-[#78716c] group-hover:text-[#a8a29e]"
-              }`}
-            >
-              {item.icon}
-            </span>
-            <span className="flex-1 truncate text-left">{item.label}</span>
-            {item.badge !== undefined && item.badge > 0 && (
-              <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-[#44403c] px-1.5 text-[10px] font-semibold tabular-nums text-[#a8a29e]">
-                {item.badge > 99 ? "99+" : item.badge}
-              </span>
-            )}
+            <span className="sidebar-nav-item-icon">{item.icon}</span>
+            <span className="sidebar-nav-item-label">{item.label}</span>
           </button>
         );
       })}

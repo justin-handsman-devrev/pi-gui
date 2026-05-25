@@ -1,6 +1,15 @@
 import { create } from "zustand";
+import { loadSettings, SETTINGS_STORAGE_KEY } from "@/lib/app-settings";
 
-export type SidebarView = "chats" | "projects" | "settings" | "scheduled";
+export type SidebarView =
+  | "chats"
+  | "projects"
+  | "scheduled"
+  | "activity"
+  | "extensions"
+  | "settings";
+
+export type ExtensionsTab = "skills" | "agents" | "prompts" | "mcp";
 
 export interface ProjectSession {
   id: string;
@@ -20,6 +29,8 @@ export interface Project {
 export interface SettingsState {
   theme: "dark" | "light";
   fontSize: number;
+  appZoom: number;
+  canvasFontSize: number;
   showLineNumbers: boolean;
   canvasAutoOpen: boolean;
   compactMessages: boolean;
@@ -32,6 +43,7 @@ export interface UIState {
   sidebarWidth: number;
   activeFileTab: string | null;
   sidebarView: SidebarView;
+  extensionsTab: ExtensionsTab;
   settingsOpen: boolean;
   settings: SettingsState;
   projects: Project[];
@@ -41,6 +53,7 @@ export interface UIState {
   toggleSidebar: () => void;
   setSidebarOpen: (v: boolean) => void;
   setSidebarView: (v: SidebarView) => void;
+  setExtensionsTab: (v: ExtensionsTab) => void;
   setActiveFileTab: (tab: string | null) => void;
   setSettingsOpen: (v: boolean) => void;
   updateSettings: (partial: Partial<SettingsState>) => void;
@@ -49,17 +62,7 @@ export interface UIState {
 }
 
 // Initialize settings from localStorage
-const savedSettings = localStorage.getItem("pi-gui-settings");
-const defaultSettings: SettingsState = {
-  theme: "dark",
-  fontSize: 14,
-  showLineNumbers: true,
-  canvasAutoOpen: true,
-  compactMessages: false,
-};
-const initialSettings = savedSettings
-  ? { ...defaultSettings, ...JSON.parse(savedSettings) }
-  : defaultSettings;
+const initialSettings = loadSettings();
 
 // Initialize projects from localStorage
 const savedProjects = localStorage.getItem("pi-gui-projects");
@@ -74,6 +77,7 @@ export const useUIStore = create<UIState>((set) => ({
   sidebarWidth: 260,
   activeFileTab: null,
   sidebarView: "chats",
+  extensionsTab: "skills",
   settingsOpen: false,
   settings: initialSettings,
   projects: initialProjects,
@@ -84,12 +88,13 @@ export const useUIStore = create<UIState>((set) => ({
   toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
   setSidebarOpen: (v) => set({ sidebarOpen: v }),
   setSidebarView: (v) => set({ sidebarView: v }),
+  setExtensionsTab: (v) => set({ extensionsTab: v }),
   setActiveFileTab: (tab) => set({ activeFileTab: tab }),
   setSettingsOpen: (v) => set({ settingsOpen: v }),
   updateSettings: (partial) =>
     set((s) => {
       const settings = { ...s.settings, ...partial };
-      localStorage.setItem("pi-gui-settings", JSON.stringify(settings));
+      localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
       return { settings };
     }),
   addProject: (project) =>

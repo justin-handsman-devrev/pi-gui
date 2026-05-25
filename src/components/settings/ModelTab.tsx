@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Cpu, Sparkles, Loader2, Check } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Check, Cpu, Loader2, Sparkles } from "lucide-react";
 import { useAgentStore } from "@/stores/agentStore";
 import {
   getAvailableModels,
@@ -7,8 +7,8 @@ import {
   setThinkingLevel,
   type ModelInfo,
 } from "@/lib/tauri-commands";
-
-// ── Constants ────────────────────────────────────────────────────────────────
+import { ExtensionStat } from "@/components/extensions/extension-ui";
+import { SegmentedControl, SettingSection } from "./settings-ui";
 
 const THINKING_LEVELS = [
   { value: "off", label: "Off" },
@@ -16,30 +16,8 @@ const THINKING_LEVELS = [
   { value: "low", label: "Low" },
   { value: "medium", label: "Med" },
   { value: "high", label: "High" },
-  { value: "xhigh", label: "XHigh" },
+  { value: "xhigh", label: "Max" },
 ] as const;
-
-/**
- * Provider badge styles using warm ink and aurora tones
- */
-const PROVIDER_STYLES: Record<string, string> = {
-  anthropic: "bg-[#d4a88c]/15 text-[#d4a88c] border-[#d4a88c]/25",
-  openai: "bg-[#5fb8a3]/15 text-[#5fb8a3] border-[#5fb8a3]/25",
-  google: "bg-[#9d8bb8]/15 text-[#9d8bb8] border-[#9d8bb8]/25",
-  ollama: "bg-[#78716c]/15 text-[#a8a29e] border-[#78716c]/25",
-  openrouter: "bg-[#c494a4]/15 text-[#c494a4] border-[#c494a4]/25",
-};
-
-const DEFAULT_PROVIDER_STYLE =
-  "bg-[#44403c]/30 text-[#78716c] border-[#44403c]/40";
-
-function providerStyle(provider: string) {
-  const key = provider.toLowerCase();
-  for (const [k, v] of Object.entries(PROVIDER_STYLES)) {
-    if (key.includes(k)) return v;
-  }
-  return DEFAULT_PROVIDER_STYLE;
-}
 
 function formatContextWindow(tokens: number): string {
   if (tokens >= 1_000_000) return `${(tokens / 1_000_000).toFixed(1)}M`;
@@ -47,64 +25,20 @@ function formatContextWindow(tokens: number): string {
   return String(tokens);
 }
 
-// ── Skeleton Card ────────────────────────────────────────────────────────────
+function providerKey(provider: string): string {
+  const lower = provider.toLowerCase();
+  if (lower.includes("anthropic")) return "anthropic";
+  if (lower.includes("openai")) return "openai";
+  if (lower.includes("google")) return "google";
+  if (lower.includes("ollama")) return "ollama";
+  if (lower.includes("openrouter")) return "openrouter";
+  return "default";
+}
 
 function SkeletonCard() {
-  return (
-    <div className="animate-pulse rounded-lg border border-[#44403c]/30 bg-[#1c1917]/50 p-3">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="h-4 w-16 rounded bg-[#292524]" />
-          <div className="h-4 w-28 rounded bg-[#292524]" />
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="h-4 w-10 rounded bg-[#292524]" />
-          <div className="h-4 w-14 rounded bg-[#292524]" />
-        </div>
-      </div>
-    </div>
-  );
+  return <div className="settings-model-skeleton" />;
 }
 
-// ── Thinking Level Selector (Segmented Pill) ─────────────────────────────────
-
-interface ThinkingSelectorProps {
-  currentLevel: string;
-  onChange: (level: string) => void;
-}
-
-function ThinkingSelector({ currentLevel, onChange }: ThinkingSelectorProps) {
-  return (
-    <div className="flex items-center gap-0.5 rounded-full bg-[#44403c]/30 p-0.5">
-      {THINKING_LEVELS.map(({ value, label }) => {
-        const isActive = currentLevel === value;
-        return (
-          <button
-            key={value}
-            onClick={() => onChange(value)}
-            aria-pressed={isActive}
-            className={`
-              relative rounded-full px-3 py-1.5 text-[12px] font-medium transition-colors duration-150
-              ${isActive ? "bg-[#292524] text-[#fafaf9]" : "text-[#78716c] hover:text-[#a8a29e]"}
-            `}
-          >
-            {label}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-// ── Component ────────────────────────────────────────────────────────────────
-
-/**
- * Model settings tab with ElevenLabs-inspired design:
- * - Warm ink backgrounds (#1c1917, #292524)
- * - Aurora accents for provider badges
- * - Pill-shaped segmented control for thinking levels
- * - Aurora-lavender accent for active model
- */
 export default function ModelTab() {
   const model = useAgentStore((s) => s.model);
   const storeThinkingLevel = useAgentStore((s) => s.thinkingLevel);
@@ -113,8 +47,7 @@ export default function ModelTab() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [switchingTo, setSwitchingTo] = useState<string | null>(null);
-
-  // ── Fetch available models on mount ────────────────────────────────────────
+  const [query, setQuery] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -128,7 +61,7 @@ export default function ModelTab() {
           setLoading(false);
         }
       })
-      .catch((err) => {
+      .catch((err: unknown) => {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : String(err));
           setLoading(false);
@@ -140,14 +73,24 @@ export default function ModelTab() {
     };
   }, []);
 
-  // ── Handlers ───────────────────────────────────────────────────────────────
+  const filtered = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return models;
+    return models.filter(
+      (entry) =>
+        entry.id.toLowerCase().includes(needle)
+        || entry.provider.toLowerCase().includes(needle),
+    );
+  }, [models, query]);
+
+  const reasoningCount = models.filter((entry) => entry.reasoning).length;
 
   const handleThinkingLevel = async (level: string) => {
     try {
       await setThinkingLevel(level);
       useAgentStore.getState().setThinkingLevel(level);
     } catch {
-      // Silently fail — store won't update so the pill reverts
+      // Store stays unchanged on failure
     }
   };
 
@@ -160,171 +103,116 @@ export default function ModelTab() {
       const result = await setModel(info.provider, info.id);
       useAgentStore.getState().setModel(result);
     } catch {
-      // Silently fail — active model card stays unchanged
+      // Active model unchanged on failure
     } finally {
       setSwitchingTo(null);
     }
   };
 
-  // ── Render ─────────────────────────────────────────────────────────────────
-
   return (
-    <div className="space-y-6">
-      {/* ── Active Model Card ─────────────────────────────────────────────── */}
-      <section>
-        <div className="flex items-center gap-2 mb-3">
-          <Sparkles size={16} className="text-[#9d8bb8]" />
-          <h3 className="text-sm font-medium text-[#a8a29e]">Active Model</h3>
+    <div className="settings-page">
+      <div className="settings-hero-card">
+        <div className="settings-hero-icon">
+          <Sparkles size={18} strokeWidth={1.75} />
         </div>
-
-        {model ? (
-          <div className="flex items-center gap-3 rounded-lg border border-[#44403c]/40 bg-[#1c1917] p-4">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#9d8bb8]/15">
-              <Cpu size={18} className="text-[#9d8bb8]" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-[#fafaf9]">
-                {model.id}
-              </p>
-              <span
-                className={`mt-1 inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${providerStyle(model.provider)}`
-              }
-              >
+        <div className="settings-hero-copy">
+          <p className="settings-hero-label">Active model</p>
+          {model ? (
+            <>
+              <p className="settings-hero-value">{model.id}</p>
+              <span className={`settings-provider-chip is-${providerKey(model.provider)}`}>
                 {model.provider}
               </span>
-            </div>
-          </div>
-        ) : (
-          <div className="flex items-center gap-3 rounded-lg border border-[#44403c]/30 bg-[#1c1917]/50 p-4">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#44403c]">
-              <Cpu size={18} className="text-[#57534e]" />
-            </div>
-            <p className="text-sm text-[#57534e]">No model loaded</p>
-          </div>
-        )}
-      </section>
-
-      {/* ── Thinking Level ────────────────────────────────────────────────── */}
-      <section>
-        <div className="flex items-center gap-2 mb-3">
-          <Cpu size={16} className="text-[#9d8bb8]" />
-          <h3 className="text-sm font-medium text-[#a8a29e]">Thinking Level</h3>
-        </div>
-
-        <ThinkingSelector
-          currentLevel={storeThinkingLevel}
-          onChange={handleThinkingLevel}
-        />
-      </section>
-
-      {/* ── Available Models ──────────────────────────────────────────────── */}
-      <section>
-        <div className="flex items-center gap-2 mb-3">
-          <Cpu size={16} className="text-[#9d8bb8]" />
-          <h3 className="text-sm font-medium text-[#a8a29e]">
-            Available Models
-          </h3>
-          {loading && (
-            <Loader2 size={14} className="animate-spin text-[#57534e]" />
+            </>
+          ) : (
+            <p className="settings-hero-empty">No model loaded</p>
           )}
         </div>
+      </div>
 
-        {/* Loading skeletons */}
+      <div className="ext-stats-row settings-stats-row">
+        <ExtensionStat label="Available" value={loading ? "…" : models.length} />
+        <ExtensionStat label="Reasoning" value={loading ? "…" : reasoningCount} />
+        <ExtensionStat label="Thinking" value={storeThinkingLevel} />
+      </div>
+
+      <SettingSection title="Thinking level" description="Extended reasoning depth for supported models.">
+        <SegmentedControl
+          value={storeThinkingLevel}
+          options={THINKING_LEVELS.map((level) => ({
+            value: level.value,
+            label: level.label,
+          }))}
+          onChange={(level) => void handleThinkingLevel(level)}
+        />
+      </SettingSection>
+
+      <SettingSection title="Model catalog" description="Select which model the agent uses for this session.">
+        <div className="settings-search-wrap">
+          <input
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search models…"
+            className="ext-search-input"
+          />
+        </div>
+
         {loading && (
-          <div className="space-y-2">
+          <div className="settings-model-list">
             <SkeletonCard />
             <SkeletonCard />
             <SkeletonCard />
           </div>
         )}
 
-        {/* Error state */}
         {!loading && error && (
-          <div className="rounded-lg border border-[#c494a4]/20 bg-[#c494a4]/10 p-4">
-            <p className="text-sm text-[#c494a4]">
-              Failed to load models: {error}
-            </p>
+          <div className="settings-error">{error}</div>
+        )}
+
+        {!loading && !error && filtered.length === 0 && (
+          <div className="settings-empty">
+            <Cpu size={20} />
+            <p>No models match your search.</p>
           </div>
         )}
 
-        {/* Empty state */}
-        {!loading && !error && models.length === 0 && (
-          <div className="rounded-lg border border-[#44403c]/30 bg-[#1c1917]/50 p-6 text-center">
-            <Cpu size={24} className="mx-auto mb-2 text-[#57534e]" />
-            <p className="text-sm text-[#57534e]">No models available</p>
-            <p className="mt-1 text-xs text-[#44403c]">
-              Check your provider configuration and API keys.
-            </p>
-          </div>
-        )}
-
-        {/* Model list */}
-        {!loading && !error && models.length > 0 && (
-          <div className="space-y-2">
-            {models.map((m) => {
-              const key = `${m.provider}:${m.id}`;
-              const isActive =
-                model?.provider === m.provider && model?.id === m.id;
+        {!loading && !error && filtered.length > 0 && (
+          <div className="settings-model-list">
+            {filtered.map((entry) => {
+              const key = `${entry.provider}:${entry.id}`;
+              const isActive = model?.provider === entry.provider && model?.id === entry.id;
               const isSwitching = switchingTo === key;
 
               return (
                 <button
                   key={key}
-                  onClick={() => handleSelectModel(m)}
+                  type="button"
+                  className={`settings-model-card${isActive ? " is-active" : ""}`}
+                  onClick={() => void handleSelectModel(entry)}
                   disabled={isSwitching}
-                  className={`
-                    group w-full rounded-lg border p-3 text-left
-                    transition-colors duration-150
-                    focus-visible:outline-2 focus-visible:outline-[#9d8bb8]
-                    ${
-                      isActive
-                        ? "border-[#9d8bb8]/40 bg-[#9d8bb8]/5"
-                        : "border-[#44403c]/30 bg-[#1c1917]/50 hover:border-[#44403c]/50 hover:bg-[#1c1917]"
-                    }
-                    ${isSwitching ? "opacity-60 cursor-wait" : "cursor-pointer"}
-                  `}
                 >
-                  <div className="flex items-center justify-between gap-2">
-                    {/* Left: badges + name */}
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span
-                        className={`shrink-0 inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${providerStyle(m.provider)}`}
-                      >
-                        {m.provider}
-                      </span>
-                      <span className="truncate text-sm text-[#a8a29e] group-hover:text-[#fafaf9]">
-                        {m.id}
-                      </span>
-                    </div>
-
-                    {/* Right: meta badges */}
-                    <div className="flex shrink-0 items-center gap-2">
-                      <span className="rounded bg-[#44403c]/50 px-1.5 py-0.5 text-[10px] font-medium text-[#78716c] tabular-nums">
-                        {formatContextWindow(m.contextWindow)} ctx
-                      </span>
-
-                      {m.reasoning && (
-                        <span className="rounded bg-[#9d8bb8]/15 px-1.5 py-0.5 text-[10px] font-semibold text-[#9d8bb8]">
-                          Reasoning
-                        </span>
-                      )}
-
-                      {isSwitching ? (
-                        <Loader2
-                          size={14}
-                          className="animate-spin text-[#9d8bb8]"
-                        />
-                      ) : isActive ? (
-                        <Check size={14} className="text-[#9d8bb8]" />
-                      ) : null}
-                    </div>
+                  <div className="settings-model-card-main">
+                    <span className={`settings-provider-chip is-${providerKey(entry.provider)}`}>
+                      {entry.provider}
+                    </span>
+                    <span className="settings-model-name">{entry.id}</span>
+                  </div>
+                  <div className="settings-model-meta">
+                    <span className="settings-model-ctx">{formatContextWindow(entry.contextWindow)} ctx</span>
+                    {entry.reasoning && <span className="settings-model-badge">Reasoning</span>}
+                    {isSwitching ? (
+                      <Loader2 size={14} className="animate-spin settings-model-check" />
+                    ) : isActive ? (
+                      <Check size={14} className="settings-model-check" />
+                    ) : null}
                   </div>
                 </button>
               );
             })}
           </div>
         )}
-      </section>
+      </SettingSection>
     </div>
   );
 }

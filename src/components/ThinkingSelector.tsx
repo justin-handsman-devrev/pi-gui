@@ -33,7 +33,13 @@ export default function ThinkingSelector() {
   }, [pending, storeSetLevel]);
 
   return (
-    <div className="flex rounded-full bg-[#44403c]/30 p-0.5">
+    <div
+      className="flex p-0.5"
+      style={{
+        background: "var(--surface-strong)",
+        borderRadius: "var(--r-pill)",
+      }}
+    >
       {LEVELS.map((level) => {
         const isActive = currentLevel.toLowerCase() === level;
         const isDisabled = pending !== null && pending !== level;
@@ -43,20 +49,33 @@ export default function ThinkingSelector() {
             key={level}
             onClick={() => handleSelect(level)}
             disabled={isDisabled}
-            className={`
-              relative rounded-full px-3 py-1.5 text-[12px] font-medium capitalize
-              transition-colors duration-150 disabled:opacity-50
-            `}
+            className="relative font-medium capitalize transition-colors duration-150 disabled:opacity-50"
+            style={{
+              borderRadius: "var(--r-pill)",
+              padding: "8px 12px",
+              fontSize: 12,
+              border: "none",
+              cursor: "pointer",
+              background: "transparent",
+            }}
             aria-pressed={isActive}
           >
             {isActive && (
               <motion.div
                 layoutId="thinking-pill-bg"
-                className="absolute inset-0 rounded-full bg-[#292524]"
+                className="absolute inset-0"
+                style={{
+                  borderRadius: "var(--r-pill)",
+                  background: "var(--surface-card)",
+                  boxShadow: "var(--shadow-card)",
+                }}
                 transition={{ type: "spring", stiffness: 400, damping: 30 }}
               />
             )}
-            <span className={`relative z-10 ${isActive ? "text-[#fafaf9]" : "text-[#78716c] hover:text-[#a8a29e]"}`}>
+            <span
+              className="relative z-10"
+              style={{ color: isActive ? "var(--ink)" : "var(--muted)" }}
+            >
               {level}
             </span>
           </button>

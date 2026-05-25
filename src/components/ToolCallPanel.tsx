@@ -1,296 +1,160 @@
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  ChevronDown,
-  ChevronRight,
-  Loader2,
-  Check,
-  X,
-  Terminal,
-  FileEdit,
-  FilePenLine,
-  BookOpen,
-  Search,
-  FolderSearch,
-  List,
-  Wrench,
-  FileCode,
-} from "lucide-react";
+import { ChevronDown, ExternalLink, FileCode } from "lucide-react";
 import type { ToolCallInfo } from "@/stores/agentStore";
 import { useUIStore } from "@/stores/uiStore";
 import { useCanvasStore } from "@/canvas/canvasStore";
+import {
+  extractToolFilePath,
+  extractToolOutput,
+  getToolSummaryLine,
+  getToolVisual,
+} from "@/lib/tool-utils";
 
-// ── Tool config ──────────────────────────────────────────────────────────
-
-interface ToolConfig {
-  icon: ReactNode;
-  label: string;
-  color: string;
-}
-
-const TOOL_CONFIGS: Record<string, ToolConfig> = {
-  bash: {
-    icon: <Terminal size={14} />,
-    label: "Bash",
-    color: "text-[#d4a88c]",
-  },
-  edit: {
-    icon: <FileEdit size={14} />,
-    label: "Edit",
-    color: "text-[#9d8bb8]",
-  },
-  write: {
-    icon: <FilePenLine size={14} />,
-    label: "Write",
-    color: "text-[#5fb8a3]",
-  },
-  read: {
-    icon: <BookOpen size={14} />,
-    label: "Read",
-    color: "text-[#a8a29e]",
-  },
-  grep: {
-    icon: <Search size={14} />,
-    label: "Grep",
-    color: "text-[#9d8bb8]",
-  },
-  find: {
-    icon: <FolderSearch size={14} />,
-    label: "Find",
-    color: "text-[#9d8bb8]",
-  },
-  ls: {
-    icon: <List size={14} />,
-    label: "List",
-    color: "text-[#a8a29e]",
-  },
-};
-
-const DEFAULT_CONFIG: ToolConfig = {
-  icon: <Wrench size={14} />,
-  label: "Tool",
-  color: "text-[#a8a29e]",
-};
-
-// ── Status indicator ─────────────────────────────────────────────────────
-
-function StatusIndicator({ status }: { status: ToolCallInfo["status"] }) {
-  switch (status) {
-    case "running":
-      return <Loader2 size={13} className="animate-spin text-[#d4a88c]" />;
-    case "completed":
-      return (
-        <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#5fb8a3]/15">
-          <Check size={11} className="text-[#5fb8a3]" />
-        </span>
-      );
-    case "error":
-      return (
-        <span className="flex h-4 w-4 items-center justify-center rounded-full bg-red-500/15">
-          <X size={11} className="text-red-400" />
-        </span>
-      );
-  }
-}
-
-// ── Main Component ───────────────────────────────────────────────────────
-
-interface Props {
+interface ToolCallPanelProps {
   toolCall: ToolCallInfo;
+  isLast?: boolean;
 }
 
-export default function ToolCallPanel({ toolCall }: Props) {
-  const [collapsed, setCollapsed] = useState(true);
+export default function ToolCallPanel({ toolCall, isLast = false }: ToolCallPanelProps) {
+  const [expanded, setExpanded] = useState(false);
   const [showFullOutput, setShowFullOutput] = useState(false);
   const [showArgs, setShowArgs] = useState(false);
   const setCanvasVisible = useUIStore((s) => s.setCanvasVisible);
   const setActiveFile = useCanvasStore((s) => s.setActiveFile);
 
-  const config = TOOL_CONFIGS[toolCall.toolName] ?? DEFAULT_CONFIG;
+  const visual = getToolVisual(toolCall.toolName);
   const args = toolCall.args as Record<string, unknown> | undefined;
-  const filePath = extractFilePath(toolCall.toolName, args);
-  const canViewInCanvas = ["edit", "write"].includes(toolCall.toolName) && !!filePath;
-
-  const outputText = extractOutput(toolCall);
-  const isOutputLong = outputText.length > 500;
-  const displayOutput =
-    !showFullOutput && isOutputLong
-      ? outputText.slice(0, 500) + "…"
-      : outputText;
-
-  const handleViewInCanvas = () => {
-    if (!filePath) return;
-    setCanvasVisible(true);
-    setActiveFile(filePath);
-  };
+  const filePath = extractToolFilePath(toolCall.toolName, args);
+  const canView = ["edit", "write"].includes(toolCall.toolName) && !!filePath;
+  const summary = getToolSummaryLine(toolCall);
+  const outputText = extractToolOutput(toolCall);
+  const isLong = outputText.length > 500;
+  const display = !showFullOutput && isLong ? `${outputText.slice(0, 500)}…` : outputText;
+  const bashCommand = typeof args?.command === "string" ? args.command : null;
+  const hasDetails = !!outputText || !!args || canView || bashCommand !== null;
 
   return (
-    <div className="overflow-hidden rounded-xl bg-[#131210] border border-[rgba(255,255,255,0.06)] text-[15px] transition-colors duration-150">
-      {/* Header */}
-      <button
-        type="button"
-        onClick={() => setCollapsed((c) => !c)}
-        className="flex w-full items-center gap-2 px-3 py-2 text-left transition-colors duration-150 hover:bg-[#1c1917]"
-      >
-        {/* Tool name badge */}
-        <span className={`flex items-center gap-1.5 text-[13px] ${config.color}`}>
-          {config.icon}
-          <span className="text-[#fafaf9]">{config.label}</span>
-        </span>
+    <li
+      className={`chat-tool-item chat-tool-item--${toolCall.status}${isLast ? " chat-tool-item--last" : ""}`}
+    >
+      <div className="chat-tool-item-marker" aria-hidden="true">
+        <span className="chat-tool-item-dot" />
+        {!isLast && <span className="chat-tool-item-line" />}
+      </div>
 
-        {/* File path or command */}
-        {filePath && (
-          <span className="flex items-center gap-1 truncate text-[13px] text-[#a8a29e]">
-            <FileCode size={12} className="shrink-0 text-[#57534e]" />
-            <span className="truncate font-mono">{filePath}</span>
+      <div className="chat-tool-item-main">
+        <button
+          type="button"
+          className="chat-tool-item-trigger"
+          onClick={() => hasDetails && setExpanded((value) => !value)}
+          aria-expanded={hasDetails ? expanded : undefined}
+          disabled={!hasDetails}
+        >
+          <span className={`chat-tool-item-badge chat-tool-item-badge--${visual.tone}`}>
+            {visual.icon}
+            {visual.label}
           </span>
-        )}
-        {toolCall.toolName === "bash" &&
-          typeof args?.command === "string" && (
-            <span className="truncate font-mono text-[13px] text-[#78716c]">
-              $ {String(args.command)}
-            </span>
+
+          <span className="chat-tool-item-summary" title={summary}>
+            {summary}
+          </span>
+
+          <span className={`chat-tool-item-status chat-tool-item-status--${toolCall.status}`}>
+            {toolCall.status === "running" && "Running"}
+            {toolCall.status === "completed" && "Done"}
+            {toolCall.status === "error" && "Failed"}
+          </span>
+
+          {hasDetails && (
+            <motion.span
+              className="chat-tool-item-chevron"
+              animate={{ rotate: expanded ? 180 : 0 }}
+              transition={{ duration: 0.15 }}
+              aria-hidden="true"
+            >
+              <ChevronDown size={13} />
+            </motion.span>
           )}
+        </button>
 
-        <span className="flex-1" />
-
-        {/* Status */}
-        <StatusIndicator status={toolCall.status} />
-
-        {/* Expand toggle */}
-        <span className="text-[#57534e]">
-          {collapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
-        </span>
-      </button>
-
-      {/* Body */}
-      <AnimatePresence initial={false}>
-        {!collapsed && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.15, ease: "easeOut" }}
-            className="overflow-hidden"
-          >
-            <div className="border-t border-[rgba(255,255,255,0.06)] px-3 py-2.5 font-mono text-[13px] text-[#a8a29e] space-y-2">
-              {/* Edit: replacement count */}
-              {toolCall.toolName === "edit" && (() => {
-                const edits = args?.edits;
-                if (Array.isArray(edits)) {
-                  return (
-                    <div className="text-[#57534e]">
-                      {edits.length} replacement{edits.length !== 1 ? "s" : ""}
-                    </div>
-                  );
-                }
-                return null;
-              })()}
-
-              {/* Write: content length */}
-              {toolCall.toolName === "write" &&
-                typeof args?.content === "string" && (
-                  <div className="text-[#57534e]">
-                    {args.content.length.toLocaleString()} chars
+        <AnimatePresence initial={false}>
+          {expanded && hasDetails && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
+              className="chat-tool-item-body-wrap"
+            >
+              <div className="chat-tool-item-body">
+                {bashCommand && (
+                  <div className="chat-tool-code-block">
+                    <span className="chat-tool-code-prompt">$</span>
+                    <span>{bashCommand}</span>
                   </div>
                 )}
 
-              {/* Bash: full command */}
-              {toolCall.toolName === "bash" &&
-                typeof args?.command === "string" && (
-                  <div className="rounded bg-[#1c1917] px-2 py-1.5 text-[13px]">
-                    <span className="text-[#d4a88c]">$</span>{" "}
-                    <span className="text-[#fafaf9]">
-                      {String(args.command)}
-                    </span>
+                {outputText && (
+                  <div className="chat-tool-output">
+                    <div className="chat-tool-output-label">Output</div>
+                    <pre className="chat-tool-output-pre">{display}</pre>
+                    {isLong && (
+                      <button
+                        type="button"
+                        className="chat-tool-text-btn"
+                        onClick={() => setShowFullOutput((value) => !value)}
+                      >
+                        {showFullOutput ? "Show less" : "Show more"}
+                      </button>
+                    )}
                   </div>
                 )}
 
-              {/* Output / result */}
-              {outputText && (
-                <div>
-                  <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-all rounded-lg bg-[#1c1917] p-2.5 text-[13px] text-[#a8a29e]">
-                    {displayOutput}
-                  </pre>
-                  {isOutputLong && (
+                {args && Object.keys(args).length > 0 && (
+                  <div className="chat-tool-args">
                     <button
                       type="button"
-                      onClick={() => setShowFullOutput((s) => !s)}
-                      className="mt-1 text-[11px] text-[#9d8bb8] transition-colors duration-150 hover:text-[#b8a8c8]"
+                      className="chat-tool-text-btn"
+                      onClick={() => setShowArgs((value) => !value)}
                     >
-                      {showFullOutput ? "Show less" : "Show more"}
+                      {showArgs ? "Hide arguments" : "Show arguments"}
                     </button>
-                  )}
-                </div>
-              )}
+                    <AnimatePresence initial={false}>
+                      {showArgs && (
+                        <motion.pre
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.14 }}
+                          className="chat-tool-args-pre"
+                        >
+                          {JSON.stringify(args, null, 2)}
+                        </motion.pre>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                )}
 
-              {/* Args JSON viewer */}
-              {args && Object.keys(args).length > 0 && (
-                <div>
+                {canView && (
                   <button
                     type="button"
-                    onClick={() => setShowArgs((s) => !s)}
-                    className="text-[11px] text-[#57534e] transition-colors duration-150 hover:text-[#78716c]"
+                    className="chat-tool-open-btn"
+                    onClick={() => {
+                      setCanvasVisible(true);
+                      setActiveFile(filePath!);
+                    }}
                   >
-                    {showArgs ? "Hide args" : "Show args"}
+                    <FileCode size={12} />
+                    Open in canvas
+                    <ExternalLink size={11} />
                   </button>
-                  <AnimatePresence>
-                    {showArgs && (
-                      <motion.pre
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: "auto", opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.15 }}
-                        className="mt-1 max-h-48 overflow-auto whitespace-pre-wrap break-all rounded-lg bg-[#1c1917] p-2.5 text-[11px] text-[#57534e]"
-                      >
-                        {JSON.stringify(args, null, 2)}
-                      </motion.pre>
-                    )}
-                  </AnimatePresence>
-                </div>
-              )}
-
-              {/* View in Canvas button */}
-              {canViewInCanvas && (
-                <button
-                  type="button"
-                  onClick={handleViewInCanvas}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-[#1c1917] px-3 py-1.5 text-[13px] text-[#9d8bb8] transition-colors duration-150 hover:bg-[#262220]"
-                >
-                  <FileCode size={12} />
-                  View in Canvas
-                </button>
-              )}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </li>
   );
-}
-
-/* ── helpers ─────────────────────────────────────────────────────────────── */
-
-function extractFilePath(
-  toolName: string,
-  args?: Record<string, unknown>,
-): string | null {
-  if (!args) return null;
-  if (toolName === "bash") return null;
-  return (args.path as string) ?? (args.file_path as string) ?? null;
-}
-
-function extractOutput(tc: ToolCallInfo): string {
-  if (tc.partialResult != null) return stringify(tc.partialResult);
-  if (tc.result != null) return stringify(tc.result);
-  return "";
-}
-
-function stringify(v: unknown): string {
-  if (typeof v === "string") return v;
-  try {
-    return JSON.stringify(v, null, 2);
-  } catch {
-    return String(v);
-  }
 }

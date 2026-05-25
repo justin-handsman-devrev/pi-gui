@@ -17,6 +17,13 @@ interface CanvasToolEvent {
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
+function openCanvasIfEnabled(): void {
+  const ui = useUIStore.getState();
+  if (ui.settings.canvasAutoOpen) {
+    ui.setCanvasVisible(true);
+  }
+}
+
 function extractFilePath(args: unknown): string {
   const a = args as { path?: string; file_path?: string } | null;
   return a?.path ?? a?.file_path ?? "";
@@ -35,7 +42,6 @@ function findFirstChangedLine(parsedLines: DiffLine[]): number | undefined {
 
 export function handleCanvasEvent(event: CanvasToolEvent): void {
   const canvas = useCanvasStore.getState();
-  const ui = useUIStore.getState();
   const { toolName = "", toolCallId = "" } = event;
 
   // ── edit tool start ──────────────────────────────────────────────────────
@@ -43,7 +49,7 @@ export function handleCanvasEvent(event: CanvasToolEvent): void {
     const filePath = extractFilePath(event.args);
     if (!filePath) return;
 
-    ui.setCanvasVisible(true);
+    openCanvasIfEnabled();
     canvas.openFile(filePath, "");
     canvas.setStreaming(filePath, true);
     canvas.setActiveFile(filePath);
@@ -58,7 +64,7 @@ export function handleCanvasEvent(event: CanvasToolEvent): void {
     const args = event.args as { content?: string } | null;
     const content = args?.content ?? "";
 
-    ui.setCanvasVisible(true);
+    openCanvasIfEnabled();
     canvas.openFile(filePath, content);
     canvas.setStreaming(filePath, true);
     canvas.setActiveFile(filePath);
@@ -135,7 +141,6 @@ export function useCanvasSync(): void {
 
   useEffect(() => {
     const canvas = useCanvasStore.getState();
-    const ui = useUIStore.getState();
     const keys = Object.keys(toolCalls);
     const prevKeys = prevKeysRef.current;
 
@@ -151,7 +156,7 @@ export function useCanvasSync(): void {
           const filePath = extractFilePath(tc.args);
           if (!filePath) continue;
 
-          ui.setCanvasVisible(true);
+          openCanvasIfEnabled();
           canvas.openFile(filePath, "");
           canvas.setStreaming(filePath, true);
           canvas.setActiveFile(filePath);
@@ -162,7 +167,7 @@ export function useCanvasSync(): void {
           const filePath = extractFilePath(tc.args);
           if (!filePath) continue;
 
-          ui.setCanvasVisible(true);
+          openCanvasIfEnabled();
           canvas.openFile(filePath, args?.content ?? "");
           canvas.setStreaming(filePath, true);
           canvas.setActiveFile(filePath);

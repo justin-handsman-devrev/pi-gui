@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import type { SessionStatsSnapshot } from "@/lib/session-stats";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -16,6 +17,9 @@ export interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
+  /** Pre-tool assistant text; hidden in UI once tool calls are present. */
+  preamble?: string;
+  thinking?: string | null;
   toolCalls: ToolCallInfo[];
   isStreaming: boolean;
 }
@@ -29,11 +33,9 @@ export interface AgentState {
   thinkingLevel: string;
   sessionId: string;
   sessionName?: string;
+  sessionFile?: string;
   toolCalls: Record<string, ToolCallInfo>; // toolCallId → info
-  sessionStats?: {
-    tokens: { input: number; output: number; total: number };
-    cost: number;
-  };
+  sessionStats?: SessionStatsSnapshot;
   steeringQueue: string[];
   followUpQueue: string[];
 
@@ -41,6 +43,11 @@ export interface AgentState {
   addUserMessage: (text: string) => void;
   startAssistantMessage: () => void;
   updateAssistantText: (text: string) => void;
+  updateAssistantContent: (payload: {
+    thinking: string | null;
+    preamble: string;
+    response: string;
+  }) => void;
   endAssistantMessage: () => void;
   startToolCall: (id: string, name: string, args: unknown) => void;
   updateToolCall: (id: string, partial: unknown) => void;
@@ -52,12 +59,21 @@ export interface AgentState {
   setSessionInfo: (info: {
     sessionId: string;
     sessionName?: string;
-    sessionStats?: {
-      tokens: { input: number; output: number; total: number };
-      cost: number;
-    };
+    sessionFile?: string;
+  }) => void;
+  setSessionStats: (stats: SessionStatsSnapshot | undefined) => void;
+  loadSession: (payload: {
+    sessionId: string;
+    sessionName?: string;
+    sessionFile?: string;
+    model?: { provider: string; id: string };
+    thinkingLevel?: string;
+    sessionStats?: SessionStatsSnapshot;
+    messages: Message[];
   }) => void;
   setQueues: (steering: string[], followUp: string[]) => void;
+  appendSteeringMessage: (message: string) => void;
+  appendFollowUpMessage: (message: string) => void;
   reset: () => void;
 }
 
@@ -76,13 +92,9 @@ const INITIAL_STATE = {
   thinkingLevel: "medium",
   sessionId: "",
   sessionName: undefined as string | undefined,
+  sessionFile: undefined as string | undefined,
   toolCalls: {} as Record<string, ToolCallInfo>,
-  sessionStats: undefined as
-    | {
-        tokens: { input: number; output: number; total: number };
-        cost: number;
-      }
-    | undefined,
+  sessionStats: undefined as SessionStatsSnapshot | undefined,
   steeringQueue: [] as string[],
   followUpQueue: [] as string[],
 };
@@ -133,8 +145,21 @@ export const useAgentStore = create<AgentState>((set) => ({
       const msgs = [...s.messages];
       const last = msgs[msgs.length - 1];
       if (!last || last.role !== "assistant") return s;
-      // text is the *full accumulated* content from the streaming update
-      msgs[msgs.length - 1] = { ...last, content: text };
+      msgs[msgs.length - 1] = { ...last, content: text, preamble: "" };
+      return { messages: msgs };
+    }),
+
+  updateAssistantContent: ({ thinking, preamble, response }) =>
+    set((s) => {
+      const msgs = [...s.messages];
+      const last = msgs[msgs.length - 1];
+      if (!last || last.role !== "assistant") return s;
+      msgs[msgs.length - 1] = {
+        ...last,
+        thinking,
+        preamble,
+        content: response,
+      };
       return { messages: msgs };
     }),
 
@@ -151,6 +176,22 @@ export const useAgentStore = create<AgentState>((set) => ({
 
   startToolCall: (id, name, args) =>
     set((s) => {
+      const existing = s.toolCalls[id];
+      if (existing) {
+        const msgs = s.messages.map((m) => {
+          if (m.role !== "assistant") return m;
+          const idx = m.toolCalls.findIndex((tc) => tc.toolCallId === id);
+          if (idx === -1) return m;
+          const tcs = [...m.toolCalls];
+          tcs[idx] = { ...existing, toolName: name, args };
+          return { ...m, toolCalls: tcs };
+        });
+        return {
+          toolCalls: { ...s.toolCalls, [id]: { ...existing, toolName: name, args } },
+          messages: msgs,
+        };
+      }
+
       const tc: ToolCallInfo = {
         toolCallId: id,
         toolName: name,
@@ -160,6 +201,9 @@ export const useAgentStore = create<AgentState>((set) => ({
       const msgs = [...s.messages];
       const last = msgs[msgs.length - 1];
       if (last?.role === "assistant") {
+        if (last.toolCalls.some((existingTc) => existingTc.toolCallId === id)) {
+          return s;
+        }
         msgs[msgs.length - 1] = {
           ...last,
           toolCalls: [...last.toolCalls, tc],
@@ -176,8 +220,17 @@ export const useAgentStore = create<AgentState>((set) => ({
       const existing = s.toolCalls[id];
       if (!existing) return s;
       const updated: ToolCallInfo = { ...existing, partialResult: partial };
+      const msgs = s.messages.map((m) => {
+        if (m.role !== "assistant") return m;
+        const idx = m.toolCalls.findIndex((tc) => tc.toolCallId === id);
+        if (idx === -1) return m;
+        const tcs = [...m.toolCalls];
+        tcs[idx] = updated;
+        return { ...m, toolCalls: tcs };
+      });
       return {
         toolCalls: { ...s.toolCalls, [id]: updated },
+        messages: msgs,
       };
     }),
 
@@ -217,11 +270,41 @@ export const useAgentStore = create<AgentState>((set) => ({
     set({
       sessionId: info.sessionId,
       sessionName: info.sessionName,
-      sessionStats: info.sessionStats,
+      sessionFile: info.sessionFile,
     }),
+
+  setSessionStats: (stats) => set({ sessionStats: stats }),
+
+  loadSession: (payload) => {
+    messageCounter = payload.messages.length;
+    return set({
+      messages: payload.messages,
+      sessionId: payload.sessionId,
+      sessionName: payload.sessionName,
+      sessionFile: payload.sessionFile,
+      model: payload.model,
+      thinkingLevel: payload.thinkingLevel ?? "medium",
+      sessionStats: payload.sessionStats,
+      isStreaming: false,
+      isCompacting: false,
+      toolCalls: {},
+      steeringQueue: [],
+      followUpQueue: [],
+    });
+  },
 
   setQueues: (steering, followUp) =>
     set({ steeringQueue: steering, followUpQueue: followUp }),
+
+  appendSteeringMessage: (message) =>
+    set((s) => ({
+      steeringQueue: [...s.steeringQueue, message],
+    })),
+
+  appendFollowUpMessage: (message) =>
+    set((s) => ({
+      followUpQueue: [...s.followUpQueue, message],
+    })),
 
   // ── Reset ──────────────────────────────────────────────────────────────────
 

@@ -1,254 +1,379 @@
-import { useState } from "react";
-import { Plug, Wifi, WifiOff, ExternalLink } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  ChevronDown,
+  ChevronRight,
+  ExternalLink,
+  Plus,
+  Plug,
+  Power,
+  PowerOff,
+  RefreshCw,
+  Wrench,
+} from "lucide-react";
+import {
+  confirmExtensionDelete,
+  ExtensionEditorModal,
+  type EditorField,
+} from "@/components/extensions/ExtensionEditorModal";
+import { ExtensionStat } from "@/components/extensions/extension-ui";
+import {
+  formatMcpTools,
+  newExtensionId,
+  parseMcpTools,
+  type McpServerConfig,
+} from "@/lib/extensions-defaults";
+import { useExtensionsStore } from "@/stores/extensionsStore";
 
-// ── Types ────────────────────────────────────────────────────────────────────
+type McpStatus = "connected" | "disconnected" | "error" | "connecting";
 
-type McpStatus = "connected" | "disconnected" | "error";
-
-interface McpTool {
-  name: string;
-}
-
-interface McpServer {
-  id: string;
-  name: string;
-  description: string;
-  command: string;
+interface RuntimeMcpServer extends McpServerConfig {
   status: McpStatus;
-  tools: McpTool[];
-  docsUrl?: string;
 }
 
-// ── Mock Data ────────────────────────────────────────────────────────────────
-
-const INITIAL_SERVERS: McpServer[] = [
+const MCP_FIELDS: EditorField[] = [
+  { key: "name", label: "Name", type: "text", required: true, placeholder: "github" },
+  { key: "description", label: "Description", type: "textarea", rows: 2, required: true },
+  { key: "command", label: "Command", type: "text", required: true, placeholder: "mcp-github" },
+  { key: "docsUrl", label: "Docs URL", type: "text", placeholder: "https://…" },
   {
-    id: "slack-mcp",
-    name: "slack-mcp",
-    description: "Slack messaging, search, and workspace management",
-    command: "slack-mcp-server",
-    status: "connected",
-    tools: [
-      { name: "send_message" },
-      { name: "search" },
-      { name: "list_channels" },
-      { name: "get_thread" },
-    ],
+    key: "tools",
+    label: "Tools",
+    type: "textarea",
+    rows: 6,
+    hint: "One tool per line: name or name | description",
+    placeholder: "search_code | Search code across repos",
   },
-  {
-    id: "filesystem",
-    name: "filesystem",
-    description: "File system access with read, write, and search capabilities",
-    command: "mcp-filesystem",
-    status: "disconnected",
-    tools: [
-      { name: "read_file" },
-      { name: "write_file" },
-      { name: "list_dir" },
-    ],
-  },
-  {
-    id: "github",
-    name: "github",
-    description: "GitHub API integration for issues, PRs, and repository management",
-    command: "mcp-github",
-    status: "connected",
-    tools: [
-      { name: "create_issue" },
-      { name: "list_prs" },
-      { name: "search_code" },
-      { name: "merge_pr" },
-      { name: "get_file" },
-    ],
-    docsUrl: "https://github.com/github/mcp-github",
-  },
-  {
-    id: "postgres",
-    name: "postgres",
-    description: "PostgreSQL database queries and schema inspection",
-    command: "mcp-postgres",
-    status: "error",
-    tools: [
-      { name: "query" },
-      { name: "list_tables" },
-      { name: "describe_table" },
-    ],
-  },
+  { key: "autoConnect", label: "Auto-connect on startup", type: "checkbox" },
 ];
 
-// ── Status indicator ─────────────────────────────────────────────────────────
+const emptyMcpForm = (): Record<string, string | boolean> => ({
+  name: "",
+  description: "",
+  command: "",
+  docsUrl: "",
+  tools: "",
+  autoConnect: false,
+});
 
-function StatusDot({ status }: { status: McpStatus }) {
-  const colors: Record<McpStatus, string> = {
-    // Aurora-mint for connected
-    connected: "bg-[#5fb8a3] shadow-[0_0_6px_rgba(95,184,163,0.5)]",
-    // Warm ink for disconnected
-    disconnected: "bg-[#57534e]",
-    // Aurora-rose for error
-    error: "bg-[#c494a4] shadow-[0_0_6px_rgba(196,148,164,0.5)]",
-  };
+const serverToForm = (server: McpServerConfig): Record<string, string | boolean> => ({
+  name: server.name,
+  description: server.description,
+  command: server.command,
+  docsUrl: server.docsUrl ?? "",
+  tools: formatMcpTools(server.tools),
+  autoConnect: server.autoConnect === true,
+});
 
-  const labels: Record<McpStatus, string> = {
-    connected: "Connected",
-    disconnected: "Disconnected",
-    error: "Error",
-  };
-
-  const textColors: Record<McpStatus, string> = {
-    connected: "text-[#5fb8a3]",
-    disconnected: "text-[#57534e]",
-    error: "text-[#c494a4]",
-  };
-
-  return (
-    <span className="flex items-center gap-1.5">
-      <span
-        className={`inline-block h-2 w-2 rounded-full ${colors[status]}`}
-        aria-hidden="true"
-      />
-      <span
-        className={`text-[10px] font-semibold uppercase tracking-wider ${textColors[status]}`}
-      >
-        {labels[status]}
-      </span>
-    </span>
-  );
+function statusTone(status: McpStatus): "default" | "success" | "warning" | "error" {
+  if (status === "connected") return "success";
+  if (status === "connecting") return "warning";
+  if (status === "error") return "error";
+  return "default";
 }
 
-// ── MCP Tab ──────────────────────────────────────────────────────────────────
+function statusLabel(status: McpStatus): string {
+  if (status === "connected") return "Connected";
+  if (status === "connecting") return "Connecting";
+  if (status === "error") return "Error";
+  return "Offline";
+}
 
-/**
- * MCP servers tab with ElevenLabs-inspired design:
- * - Aurora-mint (#5fb8a3) for connected status
- * - Aurora-rose (#c494a4) for error status
- * - Warm ink backgrounds for server cards
- */
-export default function McpTab() {
-  const [servers] = useState<McpServer[]>(INITIAL_SERVERS);
+function initialStatus(server: McpServerConfig): McpStatus {
+  return server.autoConnect ? "connected" : "disconnected";
+}
 
-  const connectedCount = servers.filter((s) => s.status === "connected").length;
+export default function McpTab({ embedded = false }: { embedded?: boolean }) {
+  const mcpServers = useExtensionsStore((s) => s.mcpServers);
+  const load = useExtensionsStore((s) => s.load);
+  const addMcpServer = useExtensionsStore((s) => s.addMcpServer);
+  const updateMcpServer = useExtensionsStore((s) => s.updateMcpServer);
+  const deleteMcpServer = useExtensionsStore((s) => s.deleteMcpServer);
+
+  const [runtimeStatus, setRuntimeStatus] = useState<Record<string, McpStatus>>({});
+  const [expandedServer, setExpandedServer] = useState<string | null>(null);
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, setForm] = useState<Record<string, string | boolean>>(emptyMcpForm());
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  useEffect(() => {
+    setRuntimeStatus((prev) => {
+      const next = { ...prev };
+      for (const server of mcpServers) {
+        if (!next[server.id]) {
+          next[server.id] = initialStatus(server);
+        }
+      }
+      for (const id of Object.keys(next)) {
+        if (!mcpServers.some((server) => server.id === id)) {
+          delete next[id];
+        }
+      }
+      return next;
+    });
+  }, [mcpServers]);
+
+  const servers: RuntimeMcpServer[] = useMemo(
+    () =>
+      mcpServers.map((server) => ({
+        ...server,
+        status: runtimeStatus[server.id] ?? initialStatus(server),
+      })),
+    [mcpServers, runtimeStatus],
+  );
+
+  const connectedCount = servers.filter((server) => server.status === "connected").length;
+  const errorCount = servers.filter((server) => server.status === "error").length;
   const totalTools = servers.reduce(
-    (sum, s) => sum + (s.status === "connected" ? s.tools.length : 0),
+    (sum, server) => sum + (server.status === "connected" ? server.tools.length : 0),
     0,
   );
 
+  const openCreate = () => {
+    setEditingId(null);
+    setForm(emptyMcpForm());
+    setEditorOpen(true);
+  };
+
+  const openEdit = (server: McpServerConfig) => {
+    setEditingId(server.id);
+    setForm(serverToForm(server));
+    setEditorOpen(true);
+  };
+
+  const closeEditor = () => {
+    setEditorOpen(false);
+    setEditingId(null);
+  };
+
+  const handleSave = () => {
+    const name = String(form.name).trim();
+    const description = String(form.description).trim();
+    const command = String(form.command).trim();
+    if (!name || !description || !command) return;
+
+    const payload: McpServerConfig = {
+      id: editingId ?? newExtensionId(),
+      name,
+      description,
+      command,
+      docsUrl: String(form.docsUrl).trim() || undefined,
+      tools: parseMcpTools(String(form.tools)),
+      autoConnect: form.autoConnect === true,
+    };
+
+    if (editingId) {
+      updateMcpServer(payload);
+    } else {
+      addMcpServer(payload);
+      setRuntimeStatus((prev) => ({
+        ...prev,
+        [payload.id]: payload.autoConnect ? "connected" : "disconnected",
+      }));
+    }
+    closeEditor();
+  };
+
+  const handleDelete = () => {
+    if (!editingId) return;
+    const server = mcpServers.find((entry) => entry.id === editingId);
+    if (!server || !confirmExtensionDelete(server.name)) return;
+    deleteMcpServer(editingId);
+    closeEditor();
+  };
+
+  const toggleConnection = (serverId: string) => {
+    const server = servers.find((entry) => entry.id === serverId);
+    if (!server || server.status === "connecting") return;
+
+    if (server.status === "connected") {
+      setRuntimeStatus((prev) => ({ ...prev, [serverId]: "disconnected" }));
+      return;
+    }
+
+    setRuntimeStatus((prev) => ({ ...prev, [serverId]: "connecting" }));
+    window.setTimeout(() => {
+      setRuntimeStatus((prev) => ({ ...prev, [serverId]: "connected" }));
+    }, 1200);
+  };
+
+  const retryServer = (serverId: string) => {
+    setRuntimeStatus((prev) => ({ ...prev, [serverId]: "connecting" }));
+    window.setTimeout(() => {
+      setRuntimeStatus((prev) => ({ ...prev, [serverId]: "connected" }));
+    }, 1200);
+  };
+
+  const refreshAll = () => {
+    setRuntimeStatus((prev) => {
+      const next = { ...prev };
+      for (const server of servers) {
+        if (server.status === "disconnected") {
+          next[server.id] = "connecting";
+        }
+      }
+      return next;
+    });
+    window.setTimeout(() => {
+      setRuntimeStatus((prev) => {
+        const next = { ...prev };
+        for (const [id, status] of Object.entries(prev)) {
+          if (status === "connecting") next[id] = "connected";
+        }
+        return next;
+      });
+    }, 1200);
+  };
+
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div>
-        <h3 className="flex items-center gap-2 text-sm font-semibold text-[#fafaf9]">
-          <Plug size={16} className="text-[#9d8bb8]" />
-          MCP Servers
-        </h3>
-        <p className="mt-1 text-xs text-[#57534e]">
-          Model Context Protocol servers provide tools and data sources to the agent.{" "}
-          <span className="text-[#78716c]">
-            {connectedCount} connected · {totalTools} tools available
-          </span>
-        </p>
+    <div className="ext-page">
+      {!embedded && (
+        <div className="ext-page-lead">
+          <h2 className="ext-page-title">MCP servers</h2>
+          <p className="ext-page-desc">Tools and data sources exposed to the agent via Model Context Protocol.</p>
+        </div>
+      )}
+
+      <div className="ext-toolbar">
+        <button type="button" className="skills-btn-secondary" onClick={refreshAll}>
+          <RefreshCw size={12} />
+          Refresh all
+        </button>
+        <button type="button" className="skills-btn-primary" onClick={openCreate}>
+          <Plus size={12} />
+          Add server
+        </button>
       </div>
 
-      {/* Server Cards */}
-      <div className="space-y-2">
-        {servers.map((server) => (
-          <div
-            key={server.id}
-            className={`
-              rounded-lg border p-4 transition-colors duration-150
-              ${
-                server.status === "error"
-                  ? "border-[#c494a4]/20 bg-[#c494a4]/5"
-                  : server.status === "connected"
-                    ? "border-[#44403c]/50 bg-[#1c1917]/80"
-                    : "border-[#44403c]/20 bg-[#1c1917]/30 opacity-60"
-              }
-            `}
-          >
-            {/* Top row: name + status */}
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div
-                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
-                    server.status === "connected"
-                      ? "bg-[#292524] text-[#5fb8a3]"
-                      : server.status === "error"
-                        ? "bg-[#c494a4]/10 text-[#c494a4]"
-                        : "bg-[#292524]/50 text-[#57534e]"
-                  }`}
-                >
-                  {server.status === "connected" ? (
-                    <Wifi size={16} />
-                  ) : (
-                    <WifiOff size={16} />
-                  )}
+      <div className="ext-stats-row">
+        <ExtensionStat label="Connected" value={connectedCount} tone="success" />
+        <ExtensionStat label="Tools live" value={totalTools} />
+        <ExtensionStat label="Errors" value={errorCount} tone={errorCount > 0 ? "error" : "default"} />
+      </div>
+
+      <div className="ext-mcp-list">
+        {servers.map((server) => {
+          const expanded = expandedServer === server.id;
+          const liveTools = server.status === "connected" ? server.tools.length : 0;
+
+          return (
+            <article
+              key={server.id}
+              className={`ext-card ext-mcp-card ext-mcp-${server.status}${expanded ? " is-expanded" : ""}`}
+            >
+              <div className="ext-mcp-card-main">
+                <div className={`ext-mcp-status-bar ext-mcp-status-${server.status}`} aria-hidden="true" />
+
+                <div className="ext-mcp-icon">
+                  <Plug size={15} strokeWidth={1.75} />
                 </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="truncate text-sm font-medium text-[#fafaf9]">
-                      {server.name}
-                    </p>
+
+                <div className="ext-mcp-copy">
+                  <div className="ext-mcp-title-row">
+                    <h3 className="ext-card-title">{server.name}</h3>
+                    <span className={`ext-status-pill ext-status-${statusTone(server.status)}`}>
+                      {statusLabel(server.status)}
+                    </span>
+                    {server.autoConnect && server.status === "connected" && (
+                      <span className="ext-chip">Auto</span>
+                    )}
                     {server.docsUrl && (
                       <a
                         href={server.docsUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="shrink-0 text-[#57534e] transition-colors duration-150 hover:text-[#78716c]"
+                        className="ext-icon-btn"
                         aria-label={`${server.name} documentation`}
                       >
                         <ExternalLink size={12} />
                       </a>
                     )}
                   </div>
-                  <p className="mt-0.5 text-xs text-[#78716c]">
-                    {server.description}
-                  </p>
+                  <p className="ext-card-desc">{server.description}</p>
+                  <code className="ext-command-chip">{server.command}</code>
+                </div>
+
+                <div className="ext-mcp-actions">
+                  <button type="button" className="ext-text-btn" onClick={() => openEdit(server)}>
+                    Edit
+                  </button>
+                  {server.status === "error" && (
+                    <button type="button" className="ext-icon-btn" onClick={() => retryServer(server.id)} title="Retry">
+                      <RefreshCw size={13} />
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className={server.status === "connected" ? "ext-icon-btn" : "skills-btn-primary"}
+                    style={server.status === "connected" ? undefined : { height: 30, padding: "0 12px", fontSize: 11 }}
+                    onClick={() => toggleConnection(server.id)}
+                    disabled={server.status === "connecting"}
+                  >
+                    {server.status === "connected" ? (
+                      <PowerOff size={13} />
+                    ) : (
+                      <>
+                        <Power size={12} />
+                        Connect
+                      </>
+                    )}
+                  </button>
                 </div>
               </div>
-              <StatusDot status={server.status} />
-            </div>
 
-            {/* Command */}
-            <div className="mt-3 flex items-center gap-2">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-[#57534e]">
-                Command
-              </span>
-              <code className="rounded bg-[#0c0a09] px-2 py-0.5 font-mono text-[11px] text-[#78716c]">
-                {server.command}
-              </code>
-            </div>
+              <button
+                type="button"
+                className="ext-expand-trigger"
+                onClick={() => setExpandedServer(expanded ? null : server.id)}
+                aria-expanded={expanded}
+              >
+                {expanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+                <Wrench size={12} />
+                {liveTools > 0 ? `${liveTools} tools available` : `${server.tools.length} tools`}
+              </button>
 
-            {/* Tools badges */}
-            {server.tools.length > 0 && (
-              <div className="mt-2.5 flex items-center gap-1.5">
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-[#57534e]">
-                  Tools
-                </span>
-                <div className="flex flex-wrap gap-1">
-                  {server.tools.map((tool) => (
-                    <span
-                      key={tool.name}
-                      className={`rounded-md px-1.5 py-0.5 font-mono text-[10px] ${
-                        server.status === "connected"
-                          ? "bg-[#292524] text-[#78716c]"
-                          : "bg-[#1c1917] text-[#57534e]"
-                      }`}
-                    >
-                      {tool.name}
-                    </span>
-                  ))}
+              {expanded && (
+                <div className="ext-mcp-tools">
+                  {server.tools.length > 0 ? (
+                    server.tools.map((tool) => (
+                      <div key={tool.name} className="ext-tool-chip">
+                        <span className="ext-tool-name">{tool.name}</span>
+                        {tool.description && (
+                          <span className="ext-tool-desc">{tool.description}</span>
+                        )}
+                      </div>
+                    ))
+                  ) : (
+                    <p className="ext-detail-text">No tools configured. Edit this server to add tools.</p>
+                  )}
                 </div>
-              </div>
-            )}
-          </div>
-        ))}
+              )}
+            </article>
+          );
+        })}
       </div>
 
-      {/* Footer info */}
-      <p className="text-[11px] text-[#44403c]">
-        MCP servers are configured in{" "}
-        <code className="text-[#57534e]">~/.pi/agent/config.json</code>. Restart
-        the agent to apply changes.
-      </p>
+      <div className="ext-callout">
+        <Plug size={14} />
+        <p>
+          MCP server configs are saved locally. Apply to{" "}
+          <code className="ext-inline-code">~/.pi/agent/config.json</code> and restart the agent.
+        </p>
+      </div>
+
+      <ExtensionEditorModal
+        open={editorOpen}
+        title={editingId ? "Edit MCP server" : "Add MCP server"}
+        fields={MCP_FIELDS}
+        values={form}
+        onChange={(key, value) => setForm((prev) => ({ ...prev, [key]: value }))}
+        onSave={handleSave}
+        onCancel={closeEditor}
+        onDelete={editingId ? handleDelete : undefined}
+      />
     </div>
   );
 }

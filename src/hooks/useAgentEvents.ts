@@ -1,33 +1,35 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { useAgentStore } from "@/stores/agentStore";
 import { handleCanvasEvent } from "@/hooks/useCanvasSync";
+import { parseAssistantContent } from "@/lib/assistant-content";
+import { parseQueueUpdate } from "@/lib/queue-utils";
+import { refreshSessionStats } from "@/lib/session-stats";
 
 /**
  * Hook that subscribes to Tauri agent events and dispatches to stores.
  * Call once at the app root.
  */
 export function useAgentEvents() {
-  const unlistenRef = useRef<UnlistenFn | null>(null);
-  const cancelledRef = useRef(false);
-
   useEffect(() => {
-    cancelledRef.current = false;
+    let cancelled = false;
+    let unlisten: UnlistenFn | null = null;
 
-    (async () => {
-      unlistenRef.current = await listen<Record<string, unknown>>(
-        "agent-event",
-        (event) => {
-          if (cancelledRef.current) return;
-          handleEvent(event.payload);
-        },
-      );
-    })();
+    void listen<Record<string, unknown>>("agent-event", (event) => {
+      if (cancelled) return;
+      handleEvent(event.payload);
+    }).then((fn) => {
+      if (cancelled) {
+        fn();
+        return;
+      }
+      unlisten = fn;
+    });
 
     return () => {
-      cancelledRef.current = true;
-      unlistenRef.current?.();
-      unlistenRef.current = null;
+      cancelled = true;
+      unlisten?.();
+      unlisten = null;
     };
   }, []);
 }
@@ -45,6 +47,7 @@ function handleEvent(payload: Record<string, unknown>) {
     case "agent_end": {
       store.setStreaming(false);
       store.endAssistantMessage();
+      void refreshSessionStats();
       break;
     }
 
@@ -59,10 +62,11 @@ function handleEvent(payload: Record<string, unknown>) {
     case "message_update": {
       const message = payload.message as Record<string, unknown> | undefined;
       if (message?.role === "assistant") {
-        // Extract text from content array
         const content = message.content as Array<Record<string, unknown>> | undefined;
-        const text = extractTextFromContent(content);
-        store.updateAssistantText(text);
+        const messages = useAgentStore.getState().messages;
+        const last = messages[messages.length - 1];
+        const hasToolCalls = (last?.toolCalls.length ?? 0) > 0;
+        store.updateAssistantContent(parseAssistantContent(content, hasToolCalls));
       }
       break;
     }
@@ -70,8 +74,10 @@ function handleEvent(payload: Record<string, unknown>) {
       const message = payload.message as Record<string, unknown> | undefined;
       if (message?.role === "assistant") {
         const content = message.content as Array<Record<string, unknown>> | undefined;
-        const text = extractTextFromContent(content);
-        store.updateAssistantText(text);
+        const messages = useAgentStore.getState().messages;
+        const last = messages[messages.length - 1];
+        const hasToolCalls = (last?.toolCalls.length ?? 0) > 0;
+        store.updateAssistantContent(parseAssistantContent(content, hasToolCalls));
       }
       break;
     }
@@ -117,8 +123,7 @@ function handleEvent(payload: Record<string, unknown>) {
 
     // ── Queue updates ──────────────────────────────────────────────
     case "queue_update": {
-      const steering = (payload.steering as string[]) ?? [];
-      const followUp = (payload.followUp as string[]) ?? [];
+      const { steering, followUp } = parseQueueUpdate(payload);
       store.setQueues(steering, followUp);
       break;
     }
@@ -130,6 +135,7 @@ function handleEvent(payload: Record<string, unknown>) {
     }
     case "compaction_end": {
       store.setCompacting(false);
+      void refreshSessionStats();
       break;
     }
 
@@ -140,14 +146,23 @@ function handleEvent(payload: Record<string, unknown>) {
       break;
     }
     case "session_info_changed": {
-      // Session name might change
+      const info = payload.info as Record<string, unknown> | undefined;
+      if (info) {
+        store.setSessionInfo({
+          sessionId: (info.sessionId as string) || store.sessionId,
+          sessionName: info.sessionName as string | undefined,
+          sessionFile: info.sessionFile as string | undefined,
+        });
+      }
       break;
     }
 
     // ── Turn lifecycle ─────────────────────────────────────────────
     case "turn_start":
     case "turn_end": {
-      // Could be used for turn-level tracking
+      if (eventType === "turn_end") {
+        void refreshSessionStats();
+      }
       break;
     }
 
@@ -163,19 +178,4 @@ function handleEvent(payload: Record<string, unknown>) {
       console.log("[pi-gui] unhandled event:", eventType, payload);
     }
   }
-}
-
-/**
- * Extract plain text from a pi agent content array.
- * Content is like: [{ type: "text", text: "hello" }, { type: "toolCall", ... }]
- */
-function extractTextFromContent(
-  content: Array<Record<string, unknown>> | undefined,
-): string {
-  if (!content || !Array.isArray(content)) return "";
-
-  return content
-    .filter((block) => block.type === "text")
-    .map((block) => (block.text as string) ?? "")
-    .join("");
 }

@@ -36,14 +36,20 @@ export default function SessionSidebar() {
   const displayName = sessionName || sessionId?.slice(0, 8) || "New Session";
 
   return (
-    <div className="flex h-8 items-center gap-2 border-b border-dark-border bg-dark-elevated px-3">
+    <div
+      className="flex h-9 items-center gap-2 px-3"
+      style={{
+        borderBottom: "1px solid var(--hairline)",
+        background: "var(--surface-card)",
+      }}
+    >
       {/* Session name */}
-      <span className="truncate text-xs font-medium text-text-primary">
+      <span className="truncate" style={{ fontSize: 12, fontWeight: 500, color: "var(--ink)" }}>
         {displayName}
       </span>
 
       {sessionId && (
-        <span className="shrink-0 text-[10px] text-text-muted">
+        <span style={{ fontSize: 10, color: "var(--muted-soft)" }}>
           {sessionId.slice(0, 8)}
         </span>
       )}
@@ -54,7 +60,15 @@ export default function SessionSidebar() {
       <button
         onClick={handleCompact}
         disabled={isCompacting}
-        className="shrink-0 rounded px-1.5 py-0.5 text-[10px] text-text-muted transition-colors hover:bg-dark-border hover:text-text-secondary disabled:opacity-50"
+        className="hover-surface shrink-0 px-1.5 py-0.5"
+        style={{
+          borderRadius: "var(--r-sm)",
+          fontSize: 10,
+          color: "var(--muted-soft)",
+          border: "none",
+          background: "transparent",
+          cursor: "pointer",
+        }}
         title="Compact session context"
       >
         {isCompacting ? "Compacting…" : "Compact"}
@@ -63,7 +77,15 @@ export default function SessionSidebar() {
       {/* New session */}
       <button
         onClick={handleNewSession}
-        className="flex shrink-0 items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] text-text-muted transition-colors hover:bg-dark-border hover:text-text-secondary"
+        className="hover-surface flex shrink-0 items-center gap-1 px-1.5 py-0.5"
+        style={{
+          borderRadius: "var(--r-sm)",
+          fontSize: 10,
+          color: "var(--muted-soft)",
+          border: "none",
+          background: "transparent",
+          cursor: "pointer",
+        }}
         title="Start new session"
       >
         <svg

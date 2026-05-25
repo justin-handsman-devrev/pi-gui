@@ -1,48 +1,139 @@
+use crate::file_ops::expand_tilde;
 use crate::types::{BridgeState, PendingRequest, PiBridge, RpcCommand, RpcResponse};
 use std::collections::HashMap;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use tauri::Emitter;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 
-/// Resolve the full path to the `pi` binary.
-/// macOS GUI apps don't inherit the shell PATH, so we search common locations.
-fn resolve_pi_path() -> Result<String, String> {
-    // 1. Check PATH-inherited resolution (works in dev mode from terminal)
-    if let Ok(path) = which::which("pi") {
-        return Ok(path.to_string_lossy().into_owned());
-    }
+const EXTRA_PATHS: &[&str] = &[
+    "/opt/homebrew/bin",
+    "/usr/local/bin",
+    "/opt/local/bin",
+    "/usr/bin",
+    "/bin",
+    "/usr/sbin",
+    "/sbin",
+];
 
-    // 2. Search common macOS locations explicitly
-    let candidates = [
-        "/opt/homebrew/bin/pi",
-        "/usr/local/bin/pi",
-        "/usr/bin/pi",
-        "/opt/local/bin/pi",
-        "/run/current-system/sw/bin/pi", // Nix
-    ];
-    for candidate in &candidates {
-        if std::path::Path::new(candidate).exists() {
-            return Ok(candidate.to_string());
-        }
-    }
+fn build_path_env() -> String {
+    let inherited = std::env::var("PATH").unwrap_or_default();
+    format!("{}:{}", EXTRA_PATHS.join(":"), inherited)
+}
 
-    // 3. Try resolving via the user's shell profile
-    if let Ok(output) = std::process::Command::new("/bin/zsh")
-        .args(["-l", "-c", "which pi"])
+fn path_exists(path: &str) -> bool {
+    Path::new(path).exists()
+}
+
+fn resolve_via_login_shell(binary: &str) -> Option<String> {
+    let output = std::process::Command::new("/bin/zsh")
+        .args(["-l", "-c", &format!("command -v {binary}")])
         .output()
-    {
-        if output.status.success() {
-            let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
-            if !path.is_empty() && std::path::Path::new(&path).exists() {
-                return Ok(path);
-            }
+        .ok()?;
+
+    if !output.status.success() {
+        return None;
+    }
+
+    let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    if path.is_empty() || !path_exists(&path) {
+        return None;
+    }
+
+    Some(path)
+}
+
+fn resolve_binary(name: &str, candidates: &[&str]) -> Result<String, String> {
+    if let Ok(path) = which::which(name) {
+        let resolved = path.to_string_lossy().into_owned();
+        if path_exists(&resolved) {
+            return Ok(resolved);
         }
     }
 
-    Err(
-        "Could not find `pi` binary. Make sure @earendil-works/pi-coding-agent is installed globally (npm install -g @earendil-works/pi-coding-agent) and available on PATH.".to_string()
+    for candidate in candidates {
+        if path_exists(candidate) {
+            return Ok((*candidate).to_string());
+        }
+    }
+
+    if let Some(path) = resolve_via_login_shell(name) {
+        return Ok(path);
+    }
+
+    Err(format!("Could not find `{name}` binary on PATH."))
+}
+
+/// Resolve the full path to the `pi` CLI entrypoint.
+fn resolve_pi_path() -> Result<String, String> {
+    resolve_binary(
+        "pi",
+        &[
+            "/opt/homebrew/bin/pi",
+            "/usr/local/bin/pi",
+            "/usr/bin/pi",
+            "/opt/local/bin/pi",
+            "/run/current-system/sw/bin/pi",
+        ],
     )
+    .map_err(|_| {
+        "Could not find `pi`. Install @earendil-works/pi-coding-agent globally (npm install -g @earendil-works/pi-coding-agent) and ensure it is on PATH.".to_string()
+    })
+}
+
+fn resolve_node_path() -> Result<String, String> {
+    resolve_binary(
+        "node",
+        &[
+            "/opt/homebrew/bin/node",
+            "/usr/local/bin/node",
+            "/usr/bin/node",
+            "/opt/local/bin/node",
+        ],
+    )
+    .map_err(|_| {
+        "Could not find `node`. Pi is installed as a Node.js CLI — install Node.js and ensure `node` is on PATH.".to_string()
+    })
+}
+
+struct PiLaunch {
+    program: String,
+    args: Vec<String>,
+}
+
+/// npm global installs expose `pi` as a Node script; spawn node directly so GUI apps
+/// don't depend on `#!/usr/bin/env node` resolving in a stripped-down PATH.
+fn resolve_pi_launch() -> Result<PiLaunch, String> {
+    let pi_path = resolve_pi_path()?;
+    let canonical = PathBuf::from(&pi_path)
+        .canonicalize()
+        .unwrap_or_else(|_| PathBuf::from(&pi_path));
+
+    let rpc_args = vec!["--mode".to_string(), "rpc".to_string()];
+
+    if canonical.extension().and_then(|ext| ext.to_str()) == Some("js") {
+        let node = resolve_node_path()?;
+        let mut args = vec![canonical.to_string_lossy().into_owned()];
+        args.extend(rpc_args);
+        return Ok(PiLaunch { program: node, args });
+    }
+
+    Ok(PiLaunch {
+        program: pi_path,
+        args: rpc_args,
+    })
+}
+
+fn validate_project_dir(cwd: &str) -> Result<PathBuf, String> {
+    let resolved = expand_tilde(cwd);
+    if !resolved.is_dir() {
+        return Err(format!(
+            "Project directory does not exist: {}. Use Browse to pick a folder or enter a valid path.",
+            resolved.display()
+        ));
+    }
+    Ok(resolved)
 }
 
 impl PiBridge {
@@ -51,48 +142,29 @@ impl PiBridge {
         app: tauri::AppHandle,
         cwd: &str,
     ) -> Result<Self, String> {
-        let pi_path = resolve_pi_path()?;
+        let cwd = validate_project_dir(cwd)?;
+        let launch = resolve_pi_launch()?;
+        let full_path = build_path_env();
+        let home = std::env::var("HOME").unwrap_or_else(|_| "/".into());
 
-        // Build a PATH that includes common macOS locations.
-        // macOS GUI apps don't inherit the user's shell PATH, so node/npm/pi
-        // won't be found via `#!/usr/bin/env node` unless we set this.
-        let extra_paths = [
-            "/opt/homebrew/bin",
-            "/usr/local/bin",
-            "/opt/local/bin",
-            "/usr/bin",
-            "/bin",
-            "/usr/sbin",
-            "/sbin",
-        ];
-        let inherited_path = std::env::var("PATH").unwrap_or_default();
-        let full_path = format!("{}:{}", extra_paths.join(":"), inherited_path);
-
-        // Expand ~ to $HOME — Rust doesn't do shell tilde expansion
-        let cwd = if cwd.starts_with("~/") {
-            if let Ok(home) = std::env::var("HOME") {
-                format!("{}{}", home, &cwd[1..])
-            } else {
-                cwd.to_string()
-            }
-        } else if cwd == "~" {
-            std::env::var("HOME").unwrap_or_else(|_| ".".into())
-        } else {
-            cwd.to_string()
-        };
-
-        let mut child = tokio::process::Command::new(&pi_path)
-            .arg("--mode")
-            .arg("rpc")
+        let mut command = tokio::process::Command::new(&launch.program);
+        command
+            .args(&launch.args)
             .current_dir(&cwd)
             .env("PATH", &full_path)
-            .env("HOME", std::env::var("HOME").unwrap_or_else(|_| "/".into()))
+            .env("HOME", &home)
             .env("TERM", "xterm-256color")
             .stdin(std::process::Stdio::piped())
             .stdout(std::process::Stdio::piped())
-            .stderr(std::process::Stdio::piped())
-            .spawn()
-            .map_err(|e| format!("Failed to spawn pi at {}: {e}", pi_path))?;
+            .stderr(std::process::Stdio::piped());
+
+        let mut child = command.spawn().map_err(|e| {
+            format!(
+                "Failed to start pi ({} {}): {e}. Ensure `pi` and `node` are installed and the project folder exists.",
+                launch.program,
+                launch.args.join(" ")
+            )
+        })?;
 
         let stdin = child
             .stdin
@@ -231,16 +303,22 @@ impl PiBridge {
 
     // ── Convenience methods ────────────────────────────────────────
 
-    pub async fn prompt(&self, message: String) -> Result<RpcResponse, String> {
-        self.send_command(RpcCommand::Prompt {
-            message,
-            images: None,
-        })
-        .await
+    pub async fn prompt(
+        &self,
+        message: String,
+        images: Option<Vec<crate::types::ImageContent>>,
+    ) -> Result<RpcResponse, String> {
+        self.send_command(RpcCommand::Prompt { message, images })
+            .await
     }
 
-    pub async fn steer(&self, message: String) -> Result<RpcResponse, String> {
-        self.send_command(RpcCommand::Steer { message }).await
+    pub async fn steer(
+        &self,
+        message: String,
+        images: Option<Vec<crate::types::ImageContent>>,
+    ) -> Result<RpcResponse, String> {
+        self.send_command(RpcCommand::Steer { message, images })
+            .await
     }
 
     pub async fn abort(&self) -> Result<RpcResponse, String> {
@@ -279,6 +357,19 @@ impl PiBridge {
             custom_instructions: None,
         })
         .await
+    }
+
+    pub async fn switch_session(&self, session_path: String) -> Result<RpcResponse, String> {
+        self.send_command(RpcCommand::SwitchSession { session_path })
+            .await
+    }
+
+    pub async fn get_messages(&self) -> Result<RpcResponse, String> {
+        self.send_command(RpcCommand::GetMessages).await
+    }
+
+    pub async fn get_session_stats(&self) -> Result<RpcResponse, String> {
+        self.send_command(RpcCommand::GetSessionStats).await
     }
 
     /// Kill the child process.

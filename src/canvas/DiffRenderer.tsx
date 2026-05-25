@@ -103,21 +103,21 @@ export default function DiffRenderer({ diffs, filePath }: DiffRendererProps) {
 
   if (allLines.length === 0) {
     return (
-      <div className="flex h-full items-center justify-center bg-[#0c0a09] text-[#78716c]">
+      <div className="flex h-full items-center justify-center py-8" style={{ background: "var(--canvas-deep)", color: "var(--muted)" }}>
         <p className="text-sm">No diff available</p>
       </div>
     );
   }
 
   return (
-    <div className="flex h-full flex-col overflow-hidden bg-[#0c0a09]">
+    <div className="flex h-full flex-col overflow-hidden" style={{ background: "var(--canvas-deep)" }}>
       {/* File path header */}
-      <div className="flex h-9 shrink-0 items-center gap-2 border-b border-[rgba(255,255,255,0.06)] bg-[#131210] px-4">
-        <FileCode2 size={13} className="text-[#57534e]" />
-        <span className="truncate text-xs text-[#a8a29e] font-mono">
+      <div className="canvas-diff-header">
+        <FileCode2 size={13} style={{ color: "var(--dark-muted-soft)" }} />
+        <span className="truncate font-mono" style={{ fontSize: 12, color: "var(--muted)" }}>
           {filePath}
         </span>
-        <span className="ml-auto text-[10px] text-[#57534e]">
+        <span className="ml-auto" style={{ fontSize: 10, color: "var(--dark-muted-soft)" }}>
           {countChanges(allLines)} changes
         </span>
       </div>
@@ -163,31 +163,25 @@ function DiffLineRow({
 }) {
   const { type, content, oldLineNo, newLineNo } = line;
 
-  let bgClass = "";
+  let bgStyle: React.CSSProperties = {};
   let prefix = " ";
-  let textClass = "text-[#a8a29e]";
-  let numClass = "text-[#57534e]";
+  let textColor = "var(--muted)";
+  let numColor = "var(--dark-muted-soft)";
 
   switch (type) {
     case "added":
-      // Aurora-mint for additions
-      bgClass = "bg-[#5fb8a3]/10";
+      bgStyle = { background: "color-mix(in srgb, var(--accent-mint) 10%, transparent)" };
       prefix = "+";
-      textClass = "text-[#5fb8a3]";
-      numClass = "text-[#5fb8a3]/50";
+      textColor = "var(--accent-mint)";
+      numColor = "color-mix(in srgb, var(--accent-mint) 50%, transparent)";
       break;
     case "removed":
-      // Aurora-rose for deletions
-      bgClass = "bg-[#c494a4]/10";
+      bgStyle = { background: "color-mix(in srgb, var(--accent-rose) 10%, transparent)" };
       prefix = "-";
-      textClass = "text-[#c494a4]";
-      numClass = "text-[#c494a4]/50";
+      textColor = "var(--accent-rose)";
+      numColor = "color-mix(in srgb, var(--accent-rose) 50%, transparent)";
       break;
     case "context":
-      bgClass = "";
-      prefix = " ";
-      textClass = "text-[#78716c]";
-      numClass = "text-[#57534e]";
       break;
   }
 
@@ -201,23 +195,29 @@ function DiffLineRow({
     .replace(/>/g, "&gt;");
 
   return (
-    <div className={`flex h-[22px] items-start ${bgClass}`}>
+    <div className="flex h-[22px] items-start" style={bgStyle}>
       {/* Old line number */}
       <div
-        className={`shrink-0 select-none text-right text-[11px] leading-[22px] ${numClass}`}
-        style={{ width: gutterWidth }}
+        className="shrink-0 select-none text-right"
+        style={{ width: gutterWidth, fontSize: 11, lineHeight: "22px", color: numColor }}
       >
         {oldStr || "\u00A0"}
       </div>
       {/* New line number */}
       <div
-        className={`shrink-0 select-none border-r border-[rgba(255,255,255,0.06)] text-right text-[11px] leading-[22px] ${numClass}`}
-        style={{ width: gutterWidth }}
+        className="shrink-0 select-none text-right"
+        style={{
+          width: gutterWidth,
+          fontSize: 11,
+          lineHeight: "22px",
+          color: numColor,
+          borderRight: "1px solid var(--dark-hairline)",
+        }}
       >
         {newStr || "\u00A0"}
       </div>
       {/* Prefix + content */}
-      <div className={`flex min-w-0 flex-1 whitespace-pre ${textClass}`}>
+      <div className="flex min-w-0 flex-1 whitespace-pre" style={{ color: textColor }}>
         <span className="shrink-0 pl-3 pr-1 font-bold opacity-60">{prefix}</span>
         <span
           className="flex-1"
@@ -235,14 +235,14 @@ function SkippedLines({
   gutterWidth: number;
 }) {
   return (
-    <div className="flex h-[22px] items-center bg-[#1c1917]/50">
+    <div className="flex h-[22px] items-center" style={{ background: "color-mix(in srgb, var(--surface-dark-elev) 50%, transparent)" }}>
       <div className="flex-1" />
-      <div className="flex items-center gap-2 px-4 text-[11px] text-[#57534e]">
-        <span className="h-px w-6 bg-[#44403c]" />
+      <div className="flex items-center gap-2 px-4" style={{ fontSize: 11, color: "var(--dark-muted-soft)" }}>
+        <span className="h-px w-6" style={{ background: "var(--dark-surface-mid)" }} />
         <span>
           ⋯ {entry.count} lines hidden
         </span>
-        <span className="h-px w-6 bg-[#44403c]" />
+        <span className="h-px w-6" style={{ background: "var(--dark-surface-mid)" }} />
       </div>
       <div className="flex-1" />
     </div>

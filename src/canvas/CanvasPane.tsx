@@ -1,141 +1,161 @@
-import { useState } from "react";
-import { X, Code2, GitCompareArrows, Eye, EyeOff } from "lucide-react";
+import { useState, useEffect, type ReactNode } from "react";
+import { X, FileText, Eye, GitCompareArrows, FolderTree, Code2, GitBranch } from "lucide-react";
 import { useCanvasStore } from "@/canvas/canvasStore";
 import { useUIStore } from "@/stores/uiStore";
+import { getActiveProjectCwd } from "@/lib/project-cwd";
+import { viewerSupportsFile } from "@/canvas/canvas-viewer";
 import CanvasTabs from "@/canvas/CanvasTabs";
 import CanvasEditor from "@/canvas/CanvasEditor";
+import CanvasViewer from "@/canvas/CanvasViewer";
+import CanvasFileExplorer from "@/canvas/CanvasFileExplorer";
+import CanvasFontControls from "@/canvas/CanvasFontControls";
+import CanvasGitPanel from "@/canvas/CanvasGitPanel";
 import DiffRenderer from "@/canvas/DiffRenderer";
 
-/**
- * CanvasPane — the right-side panel that shows live file edits/writes
- * streaming in from the agent, with syntax highlighting and diff view.
- *
- * ElevenLabs-inspired design: warm dark ink colors, pill-shaped toggles,
- * refined aurora accent palette.
- */
 export default function CanvasPane() {
   const tabOrder = useCanvasStore((s) => s.tabOrder);
   const activeFilePath = useCanvasStore((s) => s.activeFilePath);
   const files = useCanvasStore((s) => s.files);
   const viewMode = useCanvasStore((s) => s.viewMode);
+  const panelMode = useCanvasStore((s) => s.panelMode);
   const setViewMode = useCanvasStore((s) => s.setViewMode);
+  const setPanelMode = useCanvasStore((s) => s.setPanelMode);
   const setCanvasVisible = useUIStore((s) => s.setCanvasVisible);
-
-  const [collapsed, setCollapsed] = useState(false);
+  const [showExplorer, setShowExplorer] = useState(true);
 
   const hasFiles = tabOrder.length > 0;
   const activeFile = activeFilePath ? files.get(activeFilePath) : undefined;
-  const filename = activeFile ? activeFile.filePath.split("/").pop() : "";
+  const projectName = getActiveProjectCwd().split("/").filter(Boolean).pop() ?? "Project";
+  const canPreview = activeFile
+    ? viewerSupportsFile(activeFile.filePath, activeFile.language)
+    : false;
+  const showDiff = Boolean(activeFile && activeFile.diffs.length > 0);
+  const showFontControls = hasFiles && viewMode === "text";
 
-  // ── Collapsed bar ────────────────────────────────────────────────────────
-  if (collapsed) {
-    return (
-      <div className="flex h-full w-12 flex-col items-center gap-3 border-l border-[rgba(255,255,255,0.06)] bg-[#131210] py-4">
-        <button
-          type="button"
-          onClick={() => setCollapsed(false)}
-          className="rounded-lg p-2 text-[#78716c] transition-colors duration-150 hover:bg-[#44403c]/30 hover:text-[#a8a29e]"
-          aria-label="Expand canvas"
-          data-tooltip="Expand Canvas"
-        >
-          <Eye size={16} />
-        </button>
+  useEffect(() => {
+    if (viewMode === "viewer" && activeFile && !canPreview) {
+      setViewMode("text");
+    }
+    if (viewMode === "diff" && activeFile && !showDiff) {
+      setViewMode("text");
+    }
+  }, [viewMode, activeFile, canPreview, showDiff, setViewMode]);
 
-        {/* Mini file indicator */}
-        {activeFile && (
-          <div className="flex flex-col items-center gap-1">
-            <div className="h-8 w-0.5 rounded-full bg-[#9d8bb8]/50" />
-            <span className="max-w-[40px] truncate text-center text-[9px] text-[#57534e] [writing-mode:vertical-rl]">
-              {filename}
-            </span>
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  // ── Full pane ────────────────────────────────────────────────────────────
   return (
-    <div className="flex h-full flex-col overflow-hidden bg-[#131210]">
-      {/* Header */}
-      <div className="flex h-11 shrink-0 items-center justify-between border-b border-[rgba(255,255,255,0.06)] bg-[#131210] px-3">
-        {/* Left: text-label + filename */}
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="shrink-0 text-[11px] font-semibold tracking-[0.88px] text-[#78716c] uppercase">
-            Canvas
-          </span>
-          {activeFile && filename && (
-            <>
-              <span className="text-[#57534e]">·</span>
-              <span
-                className="truncate text-[13px] text-[#a8a29e]"
-                title={activeFile.filePath}
-              >
-                {filename}
-              </span>
-            </>
-          )}
+    <div className="el-canvas-pane flex h-full flex-col overflow-hidden">
+      <div className="canvas-header">
+        <div className="canvas-header-start">
+          <span className="canvas-header-label">Canvas</span>
         </div>
 
-        {/* Center: pill toggle */}
-        {hasFiles && (
-          <div className="flex items-center gap-0.5 rounded-full bg-[#1c1917] p-0.5">
-            <ViewToggleBtn
-              active={viewMode === "code"}
-              onClick={() => setViewMode("code")}
-              icon={<Code2 size={13} />}
-              label="Code"
+        <div className="canvas-header-actions">
+          <div className="canvas-toolbar-group">
+            <PanelToggle
+              active={panelMode === "files"}
+              onClick={() => setPanelMode("files")}
+              icon={<Code2 size={12} />}
+              label="Files"
             />
-            <ViewToggleBtn
-              active={viewMode === "diff"}
-              onClick={() => setViewMode("diff")}
-              icon={<GitCompareArrows size={13} />}
-              label="Diff"
+            <PanelToggle
+              active={panelMode === "git"}
+              onClick={() => setPanelMode("git")}
+              icon={<GitBranch size={12} />}
+              label="Git"
             />
           </div>
-        )}
 
-        {/* Right: ghost icon buttons */}
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={() => setCollapsed(true)}
-            className="rounded-lg p-1.5 text-[#78716c] transition-colors duration-150 hover:bg-[#44403c]/30 hover:text-[#a8a29e]"
-            aria-label="Minimize canvas"
-          >
-            <EyeOff size={14} />
-          </button>
+          {panelMode === "files" && showFontControls && <CanvasFontControls />}
+
+          {panelMode === "files" && (
+            <button
+              type="button"
+              onClick={() => setShowExplorer((v) => !v)}
+              className={`canvas-header-btn ${showExplorer ? "is-active" : ""}`}
+              title={showExplorer ? "Hide file explorer" : "Show file explorer"}
+              aria-pressed={showExplorer}
+            >
+              <FolderTree size={13} />
+            </button>
+          )}
+
+          {panelMode === "files" && hasFiles && activeFile && (
+            <div className="canvas-toolbar-group">
+              <ViewToggle
+                active={viewMode === "text"}
+                onClick={() => setViewMode("text")}
+                icon={<FileText size={12} />}
+                label="Text"
+              />
+              <ViewToggle
+                active={viewMode === "viewer"}
+                onClick={() => setViewMode("viewer")}
+                icon={<Eye size={12} />}
+                label="Viewer"
+                disabled={!canPreview}
+                title={canPreview ? "Rendered preview" : "No preview for this file type"}
+              />
+              {showDiff && (
+                <ViewToggle
+                  active={viewMode === "diff"}
+                  onClick={() => setViewMode("diff")}
+                  icon={<GitCompareArrows size={12} />}
+                  label="Diff"
+                />
+              )}
+            </div>
+          )}
+
           <button
             type="button"
             onClick={() => setCanvasVisible(false)}
-            className="rounded-lg p-1.5 text-[#78716c] transition-colors duration-150 hover:bg-[#44403c]/30 hover:text-[#a8a29e]"
-            aria-label="Close canvas"
+            className="canvas-header-btn"
+            title="Hide canvas panel"
+            aria-label="Hide canvas panel"
           >
-            <X size={14} />
+            <X size={13} />
           </button>
         </div>
       </div>
 
-      {/* Tabs */}
-      {hasFiles && <CanvasTabs />}
-
-      {/* Content */}
-      <div className="flex-1 min-h-0 overflow-hidden">
-        {!hasFiles ? (
-          <EmptyState />
-        ) : viewMode === "diff" && activeFile && activeFile.diffs.length > 0 ? (
-          <DiffRenderer diffs={activeFile.diffs} filePath={activeFile.filePath} />
+      <div className="flex min-h-0 flex-1">
+        {panelMode === "git" ? (
+          <CanvasGitPanel />
         ) : (
-          <CanvasEditor />
+          <>
+            {showExplorer && (
+              <aside className="canvas-explorer">
+                <div className="canvas-explorer-header">
+                  <span className="truncate" title={getActiveProjectCwd()}>
+                    {projectName}
+                  </span>
+                </div>
+                <CanvasFileExplorer />
+              </aside>
+            )}
+
+            <div className="flex min-w-0 flex-1 flex-col">
+              {hasFiles && <CanvasTabs />}
+
+              <div className="min-h-0 flex-1 overflow-hidden">
+                {!hasFiles ? (
+                  <CanvasEmpty showExplorer={showExplorer} />
+                ) : viewMode === "diff" && activeFile && activeFile.diffs.length > 0 ? (
+                  <DiffRenderer diffs={activeFile.diffs} filePath={activeFile.filePath} />
+                ) : viewMode === "viewer" && canPreview ? (
+                  <CanvasViewer />
+                ) : (
+                  <CanvasEditor />
+                )}
+              </div>
+            </div>
+          </>
         )}
       </div>
     </div>
   );
 }
 
-// ── Sub-components ───────────────────────────────────────────────────────────
-
-function ViewToggleBtn({
+function PanelToggle({
   active,
   onClick,
   icon,
@@ -143,40 +163,72 @@ function ViewToggleBtn({
 }: {
   active: boolean;
   onClick: () => void;
-  icon: React.ReactNode;
+  icon: ReactNode;
   label: string;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`
-        flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-medium transition-all duration-150
-        ${
-          active
-            ? "bg-[#292524] text-[#fafaf9]"
-            : "text-[#78716c] hover:text-[#a8a29e]"
-        }
-      `}
+      title={label}
+      className={`canvas-view-toggle${active ? " is-active" : ""}`}
     >
       {icon}
-      <span>{label}</span>
+      <span className="canvas-view-toggle-label">{label}</span>
     </button>
   );
 }
 
-function EmptyState() {
+function ViewToggle({
+  active,
+  onClick,
+  icon,
+  label,
+  disabled = false,
+  title,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: ReactNode;
+  label: string;
+  disabled?: boolean;
+  title?: string;
+}) {
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
-      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#1c1917]">
-        <Code2 size={24} className="text-[#57534e]" />
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      title={title ?? label}
+      className={`canvas-view-toggle${active ? " is-active" : ""}`}
+    >
+      {icon}
+      <span className="canvas-view-toggle-label">{label}</span>
+    </button>
+  );
+}
+
+function CanvasEmpty({ showExplorer }: { showExplorer: boolean }) {
+  return (
+    <div className="flex h-full flex-col items-center justify-center gap-3 px-6 py-8 text-center">
+      <div
+        className="flex h-12 w-12 items-center justify-center"
+        style={{
+          background: "var(--surface-strong)",
+          border: "1px solid var(--hairline)",
+          borderRadius: "var(--r-lg)",
+        }}
+      >
+        <Code2 size={20} style={{ color: "var(--muted-soft)" }} />
       </div>
       <div>
-        <p className="text-sm font-medium text-[#a8a29e]">
-          No files open
+        <p style={{ fontSize: 13, fontWeight: 500, color: "var(--body-strong)" }}>
+          {showExplorer ? "Pick a file to preview" : "No files open"}
         </p>
-        <p className="mt-1 text-xs text-[#78716c]">
-          Files will appear here as the agent edits them
+        <p className="mt-1.5" style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.5 }}>
+          {showExplorer
+            ? "Browse the project tree, then use Text to edit or Viewer to preview supported files."
+            : "Open the file explorer or let the agent edit files to populate the canvas."}
         </p>
       </div>
     </div>

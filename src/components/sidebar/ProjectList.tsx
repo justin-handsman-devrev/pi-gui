@@ -1,163 +1,277 @@
-import { useState, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { ChevronRight, FolderOpen, MessageSquare } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { formatDistanceToNow } from "date-fns";
-import { useUIStore, type Project } from "@/stores/uiStore";
-
-/** Shorten a path to the last two segments for compact display. */
-function shortPath(fullPath: string): string {
-  const parts = fullPath.replace(/\/$/, "").split("/");
-  if (parts.length <= 2) return fullPath;
-  return ".../" + parts.slice(-2).join("/");
-}
+import {
+  ChevronDown,
+  FolderInput,
+  FolderOpen,
+  Loader2,
+  MessageSquare,
+  Pin,
+  Trash2,
+} from "lucide-react";
+import { useAgentStore } from "@/stores/agentStore";
+import { useSessionHistoryStore, useFilteredSessions } from "@/stores/sessionHistoryStore";
+import { useUIStore } from "@/stores/uiStore";
+import { switchToSession } from "@/lib/switch-session";
+import { loadProject } from "@/lib/load-project";
+import { getActiveProjectCwd } from "@/lib/project-cwd";
+import {
+  groupSessionsIntoProjects,
+  shortProjectPath,
+} from "@/lib/project-utils";
+import { pickProjectDirectory } from "@/lib/pick-project-dir";
 
 export default function ProjectList() {
-  const projects = useUIStore((s) => s.projects);
-  const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
+  const sessions = useFilteredSessions();
+  const savedProjects = useUIStore((s) => s.projects);
+  const removeProject = useUIStore((s) => s.removeProject);
+  const sessionId = useAgentStore((s) => s.sessionId);
+  const isStreaming = useAgentStore((s) => s.isStreaming);
+  const renameSession = useSessionHistoryStore((s) => s.renameSession);
+  const activeProjectCwd = getActiveProjectCwd();
+
+  const [expandedPaths, setExpandedPaths] = useState<Set<string>>(() => new Set());
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [loadingProjectPath, setLoadingProjectPath] = useState<string | null>(null);
+  const renameInputRef = useRef<HTMLInputElement>(null);
+
+  const projects = useMemo(
+    () => groupSessionsIntoProjects(sessions, savedProjects, activeProjectCwd),
+    [sessions, savedProjects, activeProjectCwd],
+  );
+
+  useEffect(() => {
+    if (activeProjectCwd) {
+      setExpandedPaths((prev) => new Set(prev).add(activeProjectCwd));
+    }
+  }, [activeProjectCwd]);
+
+  useEffect(() => {
+    if (renamingId && renameInputRef.current) {
+      renameInputRef.current.focus();
+      renameInputRef.current.select();
+    }
+  }, [renamingId]);
 
   const toggleExpand = useCallback((path: string) => {
     setExpandedPaths((prev) => {
       const next = new Set(prev);
-      if (next.has(path)) {
-        next.delete(path);
-      } else {
-        next.add(path);
-      }
+      if (next.has(path)) next.delete(path);
+      else next.add(path);
       return next;
     });
   }, []);
 
-  if (projects.length === 0) {
-    return (
-      <div className="px-4 py-6 text-center">
-        <FolderOpen size={24} className="mx-auto mb-2 text-[#57534e]" />
-        <p className="text-xs text-[#78716c]">No projects yet</p>
-        <p className="mt-0.5 text-[11px] text-[#57534e]">
-          Start a session to see it here
-        </p>
-      </div>
-    );
-  }
+  const handleRenameSubmit = useCallback(() => {
+    if (renamingId && renameValue.trim()) {
+      renameSession(renamingId, renameValue.trim());
+    }
+    setRenamingId(null);
+  }, [renamingId, renameValue, renameSession]);
 
-  // Sort projects by lastActive (most recent first)
-  const sorted = [...projects].sort(
-    (a, b) => new Date(b.lastActive).getTime() - new Date(a.lastActive).getTime()
-  );
+  const handleSelectSession = useCallback(async (id: string) => {
+    if (loadingId || loadingProjectPath) return;
+    const session = sessions.find((entry) => entry.id === id);
+    if (!session || session.id === useAgentStore.getState().sessionId) return;
+    setLoadingId(id);
+    try {
+      await switchToSession(session);
+    } finally {
+      setLoadingId(null);
+    }
+  }, [loadingId, loadingProjectPath, sessions]);
+
+  const handleLoadProject = useCallback(async (path: string) => {
+    if (loadingProjectPath || loadingId) return;
+    setLoadingProjectPath(path);
+    try {
+      const loaded = await loadProject(path);
+      if (loaded) {
+        setExpandedPaths((prev) => new Set(prev).add(path));
+      }
+    } finally {
+      setLoadingProjectPath(null);
+    }
+  }, [loadingId, loadingProjectPath]);
+
+  const handleBrowseProject = useCallback(async () => {
+    const selected = await pickProjectDirectory();
+    if (!selected) return;
+    await handleLoadProject(selected);
+  }, [handleLoadProject]);
+
+  const handleRemoveSavedProject = useCallback((path: string, event: React.MouseEvent) => {
+    event.stopPropagation();
+    removeProject(path);
+  }, [removeProject]);
 
   return (
-    <div className="flex flex-col gap-0.5 px-2">
-      {sorted.map((project) => (
-        <ProjectItem
-          key={project.path}
-          project={project}
-          expanded={expandedPaths.has(project.path)}
-          onToggle={() => toggleExpand(project.path)}
-        />
-      ))}
-    </div>
-  );
-}
-
-interface ProjectItemProps {
-  project: Project;
-  expanded: boolean;
-  onToggle: () => void;
-}
-
-function ProjectItem({ project, expanded, onToggle }: ProjectItemProps) {
-  const hasSessions = project.sessions.length > 0;
-
-  return (
-    <div>
-      {/* Project row */}
-      <button
-        onClick={hasSessions ? onToggle : undefined}
-        className={`
-          group flex w-full items-center gap-1.5 rounded-lg px-2 py-2
-          text-[13px] transition-all duration-150 ease-out
-          text-[#a8a29e] hover:bg-[#44403c]/30 hover:text-[#fafaf9]
-        `}
-      >
-        {/* Expand chevron */}
-        <span
-          className={`shrink-0 transition-transform duration-150 ${
-            hasSessions ? "text-[#78716c]" : "text-[#44403c]"
-          }`}
+    <div className="sidebar-projects">
+      <div className="sidebar-projects-toolbar">
+        <button
+          type="button"
+          onClick={() => void handleBrowseProject()}
+          disabled={isStreaming || !!loadingProjectPath}
+          className="sidebar-btn-primary"
         >
-          {hasSessions && (
-            <motion.span
-              animate={{ rotate: expanded ? 90 : 0 }}
-              transition={{ duration: 0.15 }}
-              style={{ display: "flex" }}
-            >
-              <ChevronRight size={14} />
-            </motion.span>
+          {loadingProjectPath ? (
+            <Loader2 size={13} className="animate-spin" />
+          ) : (
+            <FolderInput size={13} />
           )}
-          {!hasSessions && <ChevronRight size={14} className="opacity-0" />}
-        </span>
+          Open project
+        </button>
+      </div>
 
-        <FolderOpen size={14} className="shrink-0 text-[#78716c]" />
-
-        <div className="flex min-w-0 flex-1 flex-col items-start">
-          <span className="truncate font-medium text-[#fafaf9]">{project.name}</span>
-          <span className="w-full truncate font-mono text-[10px] text-[#78716c]">
-            {shortPath(project.path)}
-          </span>
+      {projects.length === 0 ? (
+        <div className="sidebar-empty">
+          <div className="sidebar-empty-icon">
+            <FolderOpen size={18} strokeWidth={1.5} />
+          </div>
+          <p className="sidebar-empty-title">No projects yet</p>
+          <p className="sidebar-empty-desc">
+            Open a folder to work in context, or start a chat to create your first project entry.
+          </p>
         </div>
+      ) : (
+        <div className="sidebar-project-cards">
+          {projects.map((project) => {
+            const expanded = expandedPaths.has(project.path);
+            const isLoadingProject = loadingProjectPath === project.path;
+            const sortedSessions = [...project.sessions].sort(
+              (a, b) => b.lastActive - a.lastActive,
+            );
 
-        {hasSessions && (
-          <span className="shrink-0 rounded-full bg-[#44403c] px-1.5 py-0.5 text-[10px] tabular-nums text-[#a8a29e]">
-            {project.sessions.length}
-          </span>
-        )}
-      </button>
-
-      {/* Sessions */}
-      <AnimatePresence initial={false}>
-        {expanded && hasSessions && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.15, ease: "easeOut" }}
-            className="overflow-hidden"
-          >
-            <div className="ml-5 flex flex-col gap-0.5 border-l border-white/[0.06] pl-3 py-0.5">
-              {project.sessions
-                .sort(
-                  (a, b) =>
-                    new Date(b.lastActive).getTime() -
-                    new Date(a.lastActive).getTime()
-                )
-                .map((session) => (
+            return (
+              <article
+                key={project.path}
+                className={`sidebar-project-card${project.isActive ? " is-active" : ""}`}
+              >
+                <div className="sidebar-project-card-header">
                   <button
-                    key={session.id}
-                    className="
-                      group flex w-full items-center gap-2 rounded-lg px-2 py-1.5
-                      text-[12px] transition-all duration-150 ease-out
-                      text-[#a8a29e] hover:bg-[#44403c]/30 hover:text-[#fafaf9]
-                    "
+                    type="button"
+                    onClick={() => toggleExpand(project.path)}
+                    className="sidebar-project-card-toggle"
+                    aria-expanded={expanded}
+                    disabled={sortedSessions.length === 0}
                   >
-                    <MessageSquare size={12} className="shrink-0 text-[#57534e] group-hover:text-[#78716c]" />
-                    <span className="flex-1 truncate text-left">
-                      {session.name}
-                    </span>
-                    <span className="shrink-0 text-[10px] tabular-nums text-[#57534e]">
-                      {formatDistanceToNow(new Date(session.lastActive), {
-                        addSuffix: false,
-                      })}
-                    </span>
-                    {session.messageCount > 0 && (
-                      <span className="shrink-0 text-[10px] tabular-nums text-[#57534e]">
-                        {session.messageCount} msg{session.messageCount !== 1 ? "s" : ""}
-                      </span>
-                    )}
+                    <ChevronDown
+                      size={14}
+                      className={`sidebar-project-card-chevron${expanded ? " is-open" : ""}`}
+                    />
                   </button>
-                ))}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+
+                  <button
+                    type="button"
+                    onClick={() => void handleLoadProject(project.path)}
+                    disabled={isLoadingProject || isStreaming}
+                    className="sidebar-project-card-main"
+                    title={project.path}
+                  >
+                    <span className="sidebar-project-card-icon">
+                      <FolderOpen size={15} strokeWidth={1.75} />
+                    </span>
+                    <span className="min-w-0 flex-1 text-left">
+                      <span className="sidebar-project-card-name">
+                        {project.name}
+                        {project.isActive && (
+                          <span className="sidebar-project-card-badge">Active</span>
+                        )}
+                      </span>
+                      <span className="sidebar-project-card-path">
+                        {shortProjectPath(project.path)}
+                      </span>
+                    </span>
+                  </button>
+
+                  {project.isPinned && (
+                    <button
+                      type="button"
+                      onClick={(event) => handleRemoveSavedProject(project.path, event)}
+                      className="sidebar-project-card-action"
+                      title="Remove from saved projects"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  )}
+                  {project.isPinned && !project.isActive && (
+                    <Pin size={11} className="sidebar-project-card-pin" aria-hidden="true" />
+                  )}
+                </div>
+
+                <div className="sidebar-project-card-meta">
+                  <span>{sortedSessions.length} chat{sortedSessions.length === 1 ? "" : "s"}</span>
+                  <span>·</span>
+                  <span>
+                    {project.lastActive > 0
+                      ? formatDistanceToNow(project.lastActive, { addSuffix: true })
+                      : "No activity"}
+                  </span>
+                </div>
+
+                {expanded && sortedSessions.length > 0 && (
+                  <div className="sidebar-project-sessions">
+                    {sortedSessions.map((session) => {
+                      const isActive = sessionId === session.id;
+                      const isRenaming = renamingId === session.id;
+
+                      return (
+                        <button
+                          key={session.id}
+                          type="button"
+                          onClick={() => void handleSelectSession(session.id)}
+                          disabled={
+                            isRenaming
+                            || (isStreaming && !isActive)
+                            || loadingId === session.id
+                            || isLoadingProject
+                          }
+                          className={`sidebar-project-session${isActive ? " is-active" : ""}`}
+                        >
+                          <MessageSquare size={12} className="sidebar-project-session-icon" />
+                          {isRenaming ? (
+                            <input
+                              ref={renameInputRef}
+                              value={renameValue}
+                              onChange={(event) => setRenameValue(event.target.value)}
+                              onBlur={handleRenameSubmit}
+                              onKeyDown={(event) => {
+                                if (event.key === "Enter") handleRenameSubmit();
+                                if (event.key === "Escape") setRenamingId(null);
+                              }}
+                              className="sidebar-project-session-input"
+                              onClick={(event) => event.stopPropagation()}
+                            />
+                          ) : (
+                            <span
+                              className="sidebar-project-session-name"
+                              onDoubleClick={(event) => {
+                                event.stopPropagation();
+                                setRenamingId(session.id);
+                                setRenameValue(session.name);
+                              }}
+                              title="Double-click to rename"
+                            >
+                              {session.name}
+                            </span>
+                          )}
+                          <span className="sidebar-project-session-meta">
+                            {loadingId === session.id
+                              ? "…"
+                              : formatDistanceToNow(session.lastActive, { addSuffix: false })}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </article>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

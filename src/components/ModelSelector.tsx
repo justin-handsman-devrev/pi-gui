@@ -11,19 +11,28 @@ import { useAgentStore } from "@/stores/agentStore";
 /**
  * Provider badge styles using warm ink and aurora tones
  */
-const PROVIDER_STYLES: Record<string, string> = {
-  anthropic: "bg-[#d4a88c]/15 text-[#d4a88c]",
-  openai: "bg-[#5fb8a3]/15 text-[#5fb8a3]",
-  google: "bg-[#9d8bb8]/15 text-[#9d8bb8]",
-  xai: "bg-[#78716c]/15 text-[#78716c]",
+const PROVIDER_STYLES: Record<string, { bg: string; color: string; border: string }> = {
+  anthropic: { bg: "var(--accent-peach)", color: "var(--accent-peach)", border: "var(--accent-peach)" },
+  openai: { bg: "var(--accent-mint)", color: "var(--accent-mint)", border: "var(--accent-mint)" },
+  google: { bg: "var(--accent-lavender)", color: "var(--accent-lavender)", border: "var(--accent-lavender)" },
+  xai: { bg: "var(--accent-slate)", color: "var(--accent-slate)", border: "var(--accent-slate)" },
 };
 
-function providerBadgeClass(provider: string): string {
+function providerBadgeClass(provider: string): React.CSSProperties {
   const key = provider.toLowerCase();
-  for (const [pattern, cls] of Object.entries(PROVIDER_STYLES)) {
-    if (key.includes(pattern)) return cls;
+  let s = { bg: "var(--hairline-strong)", color: "var(--muted)", border: "var(--hairline-strong)" };
+  for (const [pattern, style] of Object.entries(PROVIDER_STYLES)) {
+    if (key.includes(pattern)) { s = style; break; }
   }
-  return "bg-[#44403c]/50 text-[#57534e]";
+  return {
+    background: `color-mix(in srgb, ${s.bg} 15%, transparent)`,
+    color: s.color,
+    border: `1px solid color-mix(in srgb, ${s.border} 25%, transparent)`,
+    borderRadius: "var(--r-sm)",
+    padding: "4px 8px",
+    fontSize: 10,
+    fontWeight: 500,
+  };
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────
@@ -123,22 +132,28 @@ export default function ModelSelector() {
         onClick={() => setOpen(!open)}
         disabled={loading}
         className="
-          flex items-center justify-between gap-2
+          hover-hairline flex items-center justify-between gap-2
           w-64
           px-4 py-2.5
-          rounded-full
-          bg-[#131210]
-          border border-[rgba(255,255,255,0.06)]
-          text-[14px] text-[#fafaf9]
-          hover:border-[rgba(255,255,255,0.10)]
           transition-colors duration-150
           disabled:opacity-50
         "
+        style={{
+          borderRadius: "var(--r-pill)",
+          background: "var(--surface-card)",
+          border: "1px solid var(--hairline)",
+          color: "var(--ink)",
+          fontSize: 14,
+        }}
       >
         <span className="truncate">{label}</span>
         <ChevronDown
           size={14}
-          className={`text-[#78716c] transition-transform duration-150 ${open ? "rotate-180" : ""}`}
+          className="transition-transform duration-150"
+          style={{
+            color: "var(--muted-soft)",
+            transform: open ? "rotate(180deg)" : "rotate(0)",
+          }}
         />
       </button>
 
@@ -149,11 +164,17 @@ export default function ModelSelector() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -4, scale: 0.98 }}
             transition={{ duration: 0.15, ease: "easeOut" }}
-            className="absolute left-0 top-full z-50 mt-1.5 w-80 overflow-hidden rounded-xl border border-[rgba(255,255,255,0.06)] bg-[#1c1917] shadow-xl"
+            className="absolute left-0 top-full z-50 mt-1.5 w-80 overflow-hidden"
+            style={{
+              background: "var(--surface-card)",
+              border: "1px solid var(--hairline-strong)",
+              borderRadius: "var(--r-xl)",
+              boxShadow: "var(--shadow-hover)",
+            }}
           >
-            <div className="max-h-72 overflow-y-auto p-1.5">
+            <div style={{ maxHeight: 288, overflowY: "auto", padding: 8 }}>
               {models.length === 0 ? (
-                <div className="px-3 py-3 text-xs text-[#57534e]">
+                <div style={{ padding: 12, textAlign: "center", color: "var(--muted-soft)", fontSize: 12 }}>
                   No models available
                 </div>
               ) : (
@@ -168,22 +189,26 @@ export default function ModelSelector() {
                     <button
                       key={`${model.provider}-${model.id}`}
                       onClick={() => handleSelect(model)}
-                      className={`
-                        flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors duration-150
-                        ${
-                          isActive
-                            ? "bg-[#9d8bb8]/10 text-[#fafaf9]"
-                            : "text-[#a8a29e] hover:bg-[#44403c]/40 hover:text-[#fafaf9]"
-                        }
-                      `}
+                      className="hover-surface flex w-full items-center gap-3 text-left transition-colors duration-150"
+                      style={{
+                        padding: "8px 12px",
+                        borderRadius: "var(--r-md)",
+                        border: "none",
+                        cursor: "pointer",
+                        textAlign: "left",
+                        background: isActive ? "color-mix(in srgb, var(--accent-lavender) 10%, transparent)" : "transparent",
+                        color: isActive ? "var(--ink)" : "var(--body)",
+                        width: "100%",
+                      }}
                     >
                       {/* Active indicator */}
                       {isActive ? (
-                        <Check size={14} className="shrink-0 text-[#9d8bb8]" />
+                        <Check size={14} className="shrink-0" style={{ color: "var(--accent-lavender)" }} />
                       ) : isSwitching ? (
                         <Loader2
                           size={14}
-                          className="shrink-0 animate-spin text-[#9d8bb8]"
+                          className="shrink-0 animate-spin"
+                          style={{ color: "var(--accent-lavender)" }}
                         />
                       ) : (
                         <span className="w-3.5 shrink-0" />
@@ -192,18 +217,19 @@ export default function ModelSelector() {
                       {/* Model info */}
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5">
-                          <span className="truncate font-medium text-[13px]">
+                          <span className="truncate" style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)" }}>
                             {formatModelLabel(model.provider, model.id)}
                           </span>
                         </div>
-                        <div className="mt-0.5 flex items-center gap-1.5">
+                        <div className="mt-1 flex items-center gap-1.5">
                           <span
-                            className={`inline-flex rounded px-1.5 py-px text-[10px] font-medium ${providerBadgeClass(model.provider)}`}
+                            className="inline-flex"
+                            style={providerBadgeClass(model.provider)}
                           >
                             {model.provider}
                           </span>
                           {model.contextWindow > 0 && (
-                            <span className="text-[10px] text-[#57534e]">
+                            <span style={{ fontSize: 10, color: "var(--muted-soft)" }}>
                               {formatContextWindow(model.contextWindow)} ctx
                             </span>
                           )}
